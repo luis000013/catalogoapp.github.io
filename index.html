@@ -784,12 +784,11 @@ function resetDemo(){askConfirm('¿Restaurar la tienda demo local? (No borra tu 
  STORES={'s-demo':DEMO_STORE()};persistStores();cart=[];persistCart();setSession('s-demo');applyTheme(curTheme());renderCartBadge();show('tienda');toast('Demo restaurada','good');});}
 
 /* ═══════════════════════════════════════════════════════════
-   CONEXIÓN SUPABASE (ya integrada)
-   ⚠️ EDITA SOLO LA LÍNEA DE SB_KEY con tu clave "anon public"
-   (Supabase → Project Settings ⚙ → API)
+   CONEXIÓN SUPABASE · CLAVE YA INCORPORADA ✅
+   (clave "publishable" = pública por diseño; la seguridad la pone el RLS)
    ═══════════════════════════════════════════════════════════ */
 var SB_URL    = 'https://izqoardhwxxmshjnwduh.supabase.co';
-var SB_KEY    = 'PEGAAQUI_TU_ANON_KEY';
+var SB_KEY    = 'sb_publishable_Lq5KfOO6ejN3rbJ2cF9AMA_D_tYStZ7';
 var SB_HANDLE = 'alma-bazar';
 var SB_ON = SB_URL.indexOf('PEGAAQUI') === -1 && SB_KEY.indexOf('PEGAAQUI') === -1 && SB_KEY.length > 40;
 var sb = null;
@@ -797,8 +796,10 @@ try { if(SB_ON && window.supabase) sb = supabase.createClient(SB_URL, SB_KEY); }
 SB_ON = !!sb;
 var COLS = ['orders','customers','payments','receipts','reviews','posts','abandoned'];
 
+function sbBadKey(err){ if(err && /api key|unauthorized|jwt/i.test(err.message||'')) toast('Clave API inválida: revisa SB_KEY (confusión O/0 al copiar)','warn'); }
 async function sbPullStore(uid){
   var s = await sb.from('stores').select('*').eq('id', uid).single();
+  if(s.error) sbBadKey(s.error);
   if(!s.data) return null; var r = s.data;
   var db = {id:r.id, name:r.name, handle:r.handle, email:r.email, bio:r.bio||'', logo:r.logo||'', phone:r.phone||'',
             settings:(r.settings && Object.keys(r.settings).length) ? r.settings : DEFSettings(),
@@ -811,6 +812,7 @@ async function sbPullStore(uid){
 }
 async function sbPullPublic(handle){
   var s = await sb.from('store_public').select('*').eq('handle', handle).single();
+  if(s.error) sbBadKey(s.error);
   if(!s.data) return null; var r = s.data;
   var db = {id:r.id, name:r.name, handle:r.handle, email:'', bio:r.bio||'', logo:r.logo||'', phone:r.phone||'',
             settings:(r.settings && Object.keys(r.settings).length) ? r.settings : DEFSettings(),
@@ -912,7 +914,7 @@ if(SB_ON){
     show('confirm'); renderConfirm(ord);
   };
 }
-/* Arranque: conectado si hay claves, demo local si no */
+/* Arranque: conectado a Supabase (si por algún motivo no hay claves, cae a demo local) */
 (function(){
   applyTheme(LSget('cy2-theme') || 'dark');
   if(!SB_ON){ if(loadSession()){ enterApp(); } else { show('auth'); renderCartBadge(); } return; }
