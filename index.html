@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+<!-- CatálogoYa v2.1 · rediseño aplicado -->
 <html lang="es" data-theme="light">
 <head>
 <meta charset="UTF-8">
@@ -114,7 +115,7 @@ a{color:var(--blue);text-decoration:none}
 .bottombar{position:fixed;left:0;right:0;bottom:0;z-index:30;display:flex;align-items:center;background:var(--surface);border-top:1px solid var(--border);padding:12px 16px calc(12px + env(safe-area-inset-bottom));backdrop-filter:blur(12px)}
 .bottombar .in{max-width:1080px;margin:0 auto;width:100%;display:flex;align-items:center}
 .bottombar .cart{margin-left:auto;border-radius:999px;padding:13px 22px}
-.bottombar .cart .bdg{background:var(--ok-bg);color:var(--ok);border-radius:999px;padding:2px 9px;margin-left:10px;font-size:12px;font-weight:800}
+.bottombar .cart .bdg{background:var(--ok-bg);color:var(--ok);border-radius:999px;padding:2px 9px;font-size:12px;font-weight:800}
 .sumbar{position:fixed;left:0;right:0;bottom:0;z-index:30;background:var(--surface);border-top:1px solid var(--border);padding:14px 16px calc(14px + env(safe-area-inset-bottom));backdrop-filter:blur(12px)}
 .sumbar .in{max-width:1080px;margin:0 auto;display:flex;align-items:center;flex-wrap:wrap;gap:12px}
 .sumbar .tot{flex:1;min-width:150px;font-size:13px;color:var(--text2)}
@@ -148,7 +149,7 @@ table.fin td{padding:14px 12px;border-bottom:1px solid var(--border2)}
 #printArea table{width:100%;border-collapse:collapse;font-size:12.5px;margin:10px 0}
 #printArea td,#printArea th{padding:5px 4px;border-bottom:1px solid #ddd;text-align:left}
 
-/* ─── MÓDULOS REDISEÑADOS ─── */
+/* ─── MÓDULOS REDISEÑADOS v2.1 ─── */
 .admin-header{background:var(--surface);border:1px solid var(--border2);border-radius:22px;padding:22px;margin:20px 0 24px;box-shadow:var(--shadow-sm);display:flex;align-items:center;gap:16px;flex-wrap:wrap}
 .admin-header .logo{margin:0}
 .admin-header .row-main b{font-size:20px;font-weight:800;letter-spacing:-.01em}
@@ -156,7 +157,7 @@ table.fin td{padding:14px 12px;border-bottom:1px solid var(--border2)}
 
 .product-card{background:var(--surface);border:1px solid var(--border2);border-radius:20px;overflow:hidden;margin-bottom:14px;box-shadow:var(--shadow-sm);transition:all .2s}
 .product-card:hover{box-shadow:var(--shadow);transform:translateY(-2px)}
-.product-card .tile{padding-bottom:60%;border-radius:0}
+.product-card .tile{padding-bottom:56%}
 .product-card-body{padding:18px 20px 20px}
 .product-card-title{font-size:17px;font-weight:700;letter-spacing:-.01em;margin-bottom:4px}
 .product-card-meta{font-size:13px;color:var(--text2);margin-bottom:12px}
@@ -169,8 +170,8 @@ table.fin td{padding:14px 12px;border-bottom:1px solid var(--border2)}
 .publish-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px}
 @media(max-width:760px){.publish-grid{grid-template-columns:1fr}}
 .publish-section{background:var(--surface);border:1px solid var(--border2);border-radius:20px;padding:22px;box-shadow:var(--shadow-sm)}
-.publish-section h3{font-size:15px;font-weight:700;margin-bottom:14px;letter-spacing:-.01em}
-.publish-preview{border-radius:16px;overflow:hidden;margin-bottom:14px;aspect-ratio:1}
+.publish-section h3{font-size:15px;font-weight:700;margin-bottom:14px;letter-spacing:-.01em;display:flex;align-items:center;gap:8px}
+.publish-preview{border-radius:16px;overflow:hidden;margin-bottom:14px}
 .publish-preview .tile{padding-bottom:100%}
 
 .finance-section{background:var(--surface);border:1px solid var(--border2);border-radius:20px;padding:24px;margin-bottom:16px;box-shadow:var(--shadow-sm)}
@@ -192,7 +193,7 @@ table.fin td{padding:14px 12px;border-bottom:1px solid var(--border2)}
 <!-- AUTH -->
 <div id="v-auth" class="wrap" style="display:none">
   <div class="authcard">
-    <div style="display:flex;align-items:center;margin-bottom:8px">
+    <div style="display:flex;align-items:center;margin-bottom:8px;gap:12px">
       <div class="logo" style="width:48px;height:48px;font-size:16px">CY</div>
       <div><h1>CatálogoYa</h1><p style="font-size:13px;color:var(--text2);margin-top:4px">Tu tienda en línea con cierre por WhatsApp</p></div>
     </div>
@@ -215,7 +216,7 @@ table.fin td{padding:14px 12px;border-bottom:1px solid var(--border2)}
       <p id="rgErr" style="color:var(--red);font-size:13px;font-weight:600;margin-bottom:8px"></p>
       <button class="btn btn-primary" style="width:100%" onclick="doRegister()">Crear mi tienda 🚀</button>
     </div>
-    <p style="font-size:11.5px;color:var(--text2);margin-top:16px;text-align:center">Tus datos se guardan en tu cuenta de CatálogoYa (Supabase).</p>
+    <p style="font-size:11.5px;color:var(--text2);margin-top:16px;text-align:center">CatálogoYa v2.1 · Tus datos se guardan en Supabase</p>
   </div>
 </div>
 
@@ -241,7 +242,7 @@ table.fin td{padding:14px 12px;border-bottom:1px solid var(--border2)}
   <div class="chips" id="chips"></div>
   <div class="chips" id="subchips" style="margin-top:4px"></div>
   <div class="grid" id="grid"></div>
-  <p class="foot">CatálogoYa 2.0 · conectado a Supabase</p>
+  <p class="foot">CatálogoYa v2.1 · conectado a Supabase</p>
 </div>
 
 <!-- CHECKOUT -->
@@ -263,7 +264,7 @@ table.fin td{padding:14px 12px;border-bottom:1px solid var(--border2)}
     <div class="logo" id="adminLogo">AB</div>
     <div class="row-main">
       <b id="adminTitle">Panel</b>
-      <small style="color:var(--ok);display:flex;align-items:center;gap:6px;margin-top:4px"><span class="dot" style="background:var(--ok)"></span>Tiempo real activo</small>
+      <small style="color:var(--ok);display:flex;align-items:center;gap:6px;margin-top:4px"><span class="dot" style="background:var(--ok)"></span>Tiempo real activo · v2.1</small>
     </div>
     <div class="actions">
       <button class="circle-btn" id="themeBtn2" onclick="toggleTheme()"></button>
@@ -276,7 +277,7 @@ table.fin td{padding:14px 12px;border-bottom:1px solid var(--border2)}
   </div>
   <div class="tabs chips" id="adminTabs"></div>
   <div id="adminBody"></div>
-  <p class="foot">Los cambios se sincronizan entre todos tus dispositivos.</p>
+  <p class="foot">v2.1 · Los cambios se sincronizan entre todos tus dispositivos.</p>
 </div>
 
 <!-- overlays -->
@@ -476,7 +477,7 @@ function addToCart(pid,variant,qty){var p=findP(pid);if(!p||p.stock<=0)return;va
 function cartCalc(){var lines=[],sub=0;cart.forEach(function(l){var p=findP(l.pid);if(!p)return;var lt=p.price*l.qty;sub+=lt;lines.push({l:l,p:p,lt:lt});});
  var disc=0;if(sub>=DB.settings.promo.min)disc=Math.round(sub*DB.settings.promo.percent/100);return {lines:lines,subtotal:sub,discount:disc,net:sub-disc};}
 function renderCartBadge(){var n=0;cart.forEach(function(l){n+=l.qty;});var t='RD$ 0';
- if(DB){t=fmt(cartCalc().net);}$('#fabCart').innerHTML=ic('cart',18)+'<span style="margin-left:8px">'+t+'</span><span class="bdg">'+n+'</span>';}
+ if(DB){t=fmt(cartCalc().net);}$('#fabCart').innerHTML=ic('cart',18)+'<span>'+t+'</span><span class="bdg">'+n+'</span>';}
 function openCart(){$('#cartBk').className='bk show';$('#cartDr').className='drawer show';renderCart();}
 function closeCart(){$('#cartBk').className='bk';$('#cartDr').className='drawer';}
 function availabilityMessage(){var c=cartCalc();var L=[];
@@ -546,7 +547,7 @@ function closeSheet(){$('#sheetBk').className='bk';$('#sheetDr').className='draw
 function renderSheet(){var p=state.sheet;if(!p)return;var sold=p.stock<=0;
  var wa='https://wa.me/'+storePhone()+'?text='+encodeURIComponent('Hola 👋 Vi *'+p.name+'*'+(p.code?' ('+p.code+')':'')+' a '+fmt(p.price)+' en tu catálogo. ¿Está disponible? '+storeUrl()+'/p/'+p.id);
  $('#sheetBd').innerHTML='<div style="display:flex;align-items:center;margin-bottom:12px"><b style="font-size:18px;font-weight:700;flex:1">'+esc(p.name)+'</b><button class="icon-btn" onclick="closeSheet()">'+ic('x',18)+'</button></div>'+
-  tileOpen(p,sold?'sold':'')+(sold?'<span class="tb out">Agotado</span>':'')+'</div>'+
+  '<div style="border-radius:16px;overflow:hidden">'+tileOpen(p,sold?'sold':'')+(sold?'<span class="tb out">Agotado</span>':'')+'</div></div>'+
   '<p style="font-size:13px;color:var(--text2);margin:12px 0 6px">'+esc(p.cat)+(p.subcat?' · '+esc(p.subcat):'')+(p.code?' · Cód. '+esc(p.code):'')+'</p>'+
   '<p style="font-size:14px;color:var(--text2);margin-bottom:8px">'+esc(p.desc)+'</p><div class="pprice" style="margin-bottom:10px;font-size:20px">'+fmt(p.price)+'</div>'+
   (p.sizes.length?'<div class="field"><label>Talla</label><div class="chips">'+p.sizes.map(function(s){return '<button class="chip '+(state.sel['Talla']===s?'on':'')+'" onclick="state.sel[\'Talla\']=\''+s+'\';renderSheet()">'+s+'</button>';}).join('')+'</div></div>':'')+
@@ -696,7 +697,7 @@ function renderPedidos(b){var pf=state.pf;
   (DB.abandoned.length?'<h3 style="margin:20px 0 10px;font-size:17px;font-weight:700">🛒 Carritos abandonados</h3>'+DB.abandoned.map(function(a,i){return '<div class="row"><div class="row-main"><b>'+esc(a.name||a.phone)+'</b><small>'+a.items.length+' líneas · '+fDT(a.at)+'</small></div><a class="btn btn-wa" style="padding:8px 14px;font-size:12px" target="_blank" rel="noopener noreferrer" href="https://wa.me/'+a.phone.replace('+','')+'?text='+encodeURIComponent('Hola '+(a.name||'')+' 👋 Guardamos tu carrito. Retómalo aquí: '+storeUrl())+'">Recordar</a><button class="icon-btn" onclick="DB.abandoned.splice('+i+',1);persist();renderAdmin()">'+ic('x',16)+'</button></div>';}).join(''):'');}
 function openOrder(id){var o=findO(id);$('#orderBk').className='bk show';$('#orderDr').className='drawer show';
  var bal=balanceOf(o);
- $('#ordHd').innerHTML='<div style="display:flex;align-items:center"><b style="font-size:18px;font-weight:700;flex:1">#'+o.number+'</b><span class="pill '+o.status+'">'+o.status+'</span><button class="icon-btn" onclick="closeOrder()">'+ic('x',18)+'</button></div>';
+ $('#ordHd').innerHTML='<div style="display:flex;align-items:center;gap:8px"><b style="font-size:18px;font-weight:700;flex:1">#'+o.number+'</b><span class="pill '+o.status+'">'+o.status+'</span><button class="icon-btn" onclick="closeOrder()">'+ic('x',18)+'</button></div>';
  $('#ordBd').innerHTML='<p style="font-size:13px;color:var(--text2);margin-bottom:12px">'+fDT(o.created_at)+' · '+esc(o.customer_name)+' · '+esc(o.customer_phone)+'</p>'+
   o.items.map(function(it){var p=findP(it.pid);var v=Object.keys(it.variant).map(function(k){return it.variant[k];}).join(' · ');
    return '<div class="cline">'+(p?swHTML(p):'')+'<div class="row-main"><b style="font-size:14px">'+esc(it.name)+(it.code?' <span style="color:var(--text2);font-size:11px">'+esc(it.code)+'</span>':'')+'</b><small>'+(v?esc(v)+' · ':'')+it.qty+' × '+fmt(it.unit_price)+' · costo '+fmt(it.cost)+'</small></div><b style="font-size:14px">'+fmt(it.line_total)+'</b></div>';}).join('')+
@@ -767,14 +768,15 @@ function msSave(){var ms=window._ms;
  if(ms.paid){DB.payments.push({id:uid(),order_id:o.id,amount:sub,method:ms.pay,reference:'Venta manual',received_at:new Date().toISOString()});
   DB.seq.receipt+=1;DB.receipts.unshift({id:uid(),number:'R-'+('000'+DB.seq.receipt).slice(-4),order_id:o.id,issued_at:new Date().toISOString()});}
  persist();closeModal();renderAdmin();toast('Venta #'+o.number+' registrada ✔','good');}
-/* inventario rediseñado */
+/* inventario rediseñado v2.1 */
 function renderInv(b){
  var mg=function(p){return p.price>0?Math.round((p.price-p.cost)/p.price*100):0;};
  b.innerHTML='<div style="display:flex;justify-content:flex-end;margin-bottom:16px"><button class="btn btn-primary" onclick="openProd()">'+ic('plus',16)+'Nuevo producto</button></div>'+
  DB.products.map(function(p){
-  var pill=p.stock<=0?'<span class="pill out">Agotado</span>':p.stock<=DB.settings.low_stock?'<span class="pill low">Poco ('+p.stock+')</span>':'<span class="pill ok">'+p.stock+' uds</span>';
+  var sold=p.stock<=0, low=p.stock>0&&p.stock<=DB.settings.low_stock;
+  var pill=sold?'<span class="pill out">Agotado</span>':low?'<span class="pill low">Poco ('+p.stock+')</span>':'<span class="pill ok">'+p.stock+' uds</span>';
   return '<div class="product-card">'+
-   tileOpen(p,'sold'+(p.stock<=0?'':''))+
+   tileOpen(p,sold?'sold':'')+(sold?'<span class="tb out">Agotado</span>':low?'<span class="tb low">Últimas '+p.stock+'</span>':'')+'</div>'+
    '<div class="product-card-body">'+
     '<div class="product-card-title">'+esc(p.name)+'</div>'+
     '<div class="product-card-meta">'+(p.code?esc(p.code)+' · ':'')+esc(p.cat)+(p.subcat?' · '+esc(p.subcat):'')+'</div>'+
@@ -829,7 +831,7 @@ function saveProd(){var id=$('#fId').value,name=$('#fName').value.trim(),price=p
  if(id){var p=findP(id);p.name=name;p.price=price;p.cost=cost;p.stock=stock;p.cat=cat;p.subcat=sub;p.code=code;p.sizes=sizes;p.colors=colors;p.desc=$('#fDesc').value;p.image=prodImg;}
  else DB.products.unshift({id:uid(),code:code,subcat:sub,name:name,cat:cat,price:price,cost:cost,stock:stock,desc:$('#fDesc').value,sizes:sizes,colors:colors,hue:200,image:prodImg});
  persist();closeProd();renderAdmin();renderCatalog();toast('Guardado ✔','good');}
-/* finanzas rediseñadas */
+/* finanzas rediseñadas v2.1 */
 function renderFin(b){var days=state.finPeriod,cut=new Date();cut.setDate(cut.getDate()-days);
  var os=DB.orders.filter(function(o){return o.status!=='cancelado'&&new Date(o.created_at)>=cut;});
  var rev=0,cogs=0,per={};
@@ -842,7 +844,7 @@ function renderFin(b){var days=state.finPeriod,cut=new Date();cut.setDate(cut.ge
  b.innerHTML='<div class="finance-section">'+
   '<h3 style="font-size:17px;font-weight:700;margin-bottom:16px">Rendimiento del período</h3>'+
   '<div class="chips" style="margin-bottom:16px">'+[7,30,90,365].map(function(d){return '<button class="chip '+(days===d?'on':'')+'" onclick="state.finPeriod='+d+';renderAdmin()">Últimos '+d+' d</button>';}).join('')+'</div>'+
-  '<div class="kpis"><div class="kpi"><b>'+fmt(rev)+'</b><span>Ingresos</span></div><div class="kpi"><b>'+fmt(cogs)+'</b><span>COGS</span></div><div class="kpi"><b class="ok">'+fmt(gain)+'</b><span>Ganancia</span></div><div class="kpi"><b class="'+(mg<15?'red':'ok')+'">'+mg+'%</b><span>Margen</span></div></div>'+
+  '<div class="kpis" style="margin:0"><div class="kpi"><b>'+fmt(rev)+'</b><span>Ingresos</span></div><div class="kpi"><b>'+fmt(cogs)+'</b><span>COGS</span></div><div class="kpi"><b class="ok">'+fmt(gain)+'</b><span>Ganancia</span></div><div class="kpi"><b class="'+(mg<15?'red':'ok')+'">'+mg+'%</b><span>Margen</span></div></div>'+
   '</div>'+
   '<div class="finance-section"><h3 style="font-size:17px;font-weight:700;margin-bottom:12px">Tendencia semanal (4 sem)</h3><div class="bars">'+weeks.map(function(w){return '<i style="height:'+Math.round(w/mx*100)+'%"></i>';}).join('')+'</div></div>'+
   '<div class="finance-section"><h3 style="font-size:17px;font-weight:700;margin-bottom:12px">Detalle por producto</h3>'+
@@ -861,8 +863,8 @@ function renderCxC(b){var open=DB.orders.filter(function(o){return o.payment_met
     '<span class="pill '+(k==='Al día'?'ok':'out')+'">'+k+'</span>'+
     '<a class="btn btn-wa" style="padding:8px 14px;font-size:12px" target="_blank" rel="noopener noreferrer" href="https://wa.me/'+o.customer_phone.replace('+','')+'?text='+encodeURIComponent('Hola '+o.customer_name.split(' ')[0]+' 👋 Recordatorio: saldo '+fmt(balanceOf(o))+' del pedido #'+o.number+'.')+'">Recordar</a>'+
     '<button class="btn btn-primary" style="padding:8px 14px;font-size:12px" onclick="payModal(\''+o.id+'\')">Cobrar</button></div>';}).join('')||'<p style="color:var(--text2);text-align:center;padding:30px 0">🎉 No hay saldos de crédito abiertos.</p>';}
-/* clientes rediseñados */
-function renderCRM(b){b.innerHTML='<div class="row" style="background:var(--surface);margin-bottom:16px"><input class="inp" id="ncName" style="flex:1" placeholder="Nombre"><input class="inp" id="ncWa" style="flex:1" placeholder="WhatsApp 809…"><button class="btn btn-primary" onclick="addCust()">'+ic('plus',16)+'</button></div>'+
+/* clientes rediseñados v2.1 */
+function renderCRM(b){b.innerHTML='<div class="row" style="margin-bottom:16px"><input class="inp" id="ncName" style="flex:1" placeholder="Nombre"><input class="inp" id="ncWa" style="flex:1" placeholder="WhatsApp 809…"><button class="btn btn-primary" onclick="addCust()">'+ic('plus',16)+'</button></div>'+
  DB.customers.map(function(c,i){
   var ini=c.name.charAt(0).toUpperCase();
   return '<div class="customer-card">'+
@@ -881,7 +883,7 @@ function renderCRM(b){b.innerHTML='<div class="row" style="background:var(--surf
  }).join('');}
 function addCust(){var n=$('#ncName').value.trim(),w=$('#ncWa').value.replace(/\D/g,'');if(!n||!w)return toast('Nombre y WhatsApp obligatorios','warn');
  DB.customers.unshift({id:uid(),name:n,wa:w,status:'pendiente',notes:'',credit:false});persist();renderAdmin();toast('Cliente agregado','good');}
-/* publicar rediseñado */
+/* publicar rediseñado v2.1 */
 function captionFor(p){var vs=[];if(p.sizes.length)vs.push('Tallas '+p.sizes.join('–'));if(p.colors.length)vs.push(p.colors.map(function(c){return c.n;}).join('/'));
  return '🖤 '+p.name+' — '+fmt(p.price)+'\n'+vs.join(' · ')+' · '+(p.stock>0?'✔ Disponible':'⛔ Agotado')+'\n📲 Pídelo: '+storeUrl()+'/p/'+p.id+'\n#modaRD #santodomingo';}
 function pubIG(){var p=findP($('#pubSel').value);if(!p)return toast('Crea un producto primero','warn');
@@ -911,7 +913,7 @@ function renderPub(b){
    '<button class="btn btn-outline" style="width:100%" onclick="pubPost(true)">⏰ Programar</button>'+
   '</div>'+
   '<div class="publish-section">'+
-   '<h3>'+icWa(18)+' WhatsApp Status / Difusión</h3>'+
+   '<h3>'+icWa(18)+'WhatsApp Status / Difusión</h3>'+
    '<button class="btn btn-wa" style="width:100%;margin-bottom:10px" onclick="pubWAStatus()">'+icWa(16)+'Publicar en Estado de WhatsApp</button>'+
    '<button class="btn btn-outline" style="width:100%;margin-bottom:16px" onclick="copyText($(\'#pubCap\').value)">📋 Copiar caption</button>'+
    '<div class="field"><label>Segmento de difusión</label><select class="inp" id="pubSeg" onchange="renderPubSeg()"><option value="todos">Todos los clientes</option><option value="calzado">Compraron Calzado</option><option value="entregados">Entregados últimos 90 d</option></select></div>'+
@@ -924,7 +926,7 @@ function renderPub(b){
  renderPubSeg();
  $('#pubList').innerHTML=DB.posts.length?DB.posts.map(function(x){return '<div class="row" style="margin-bottom:8px"><div class="row-main"><b>'+esc(x.caption.split('\n')[0])+'</b><small>'+x.status+' · '+fDT(x.at)+'</small></div><span class="pill '+(x.status==='published'?'ok':'info')+'">'+x.status+'</span></div>';}).join(''):'<small style="color:var(--text2)">Sin publicaciones aún.</small>';}
 function renderPubPreview(){var p=findP($('#pubSel').value);if(!p)return;$('#pubCap').value=captionFor(p);
- $('#pubPrev').innerHTML=tileOpen(p)+'</div>';}
+ $('#pubPrev').innerHTML=tileOpen(p)+(p.stock<=0?'<span class="tb out">Agotado</span>':'')+'</div>';}
 function pubPost(sched){var p=findP($('#pubSel').value);if(!p)return toast('Crea un producto primero','warn');var when=$('#pubWhen').value;
  if(sched&&!when)return toast('Elige fecha y hora','warn');
  DB.posts.unshift({id:uid(),pid:p.id,caption:$('#pubCap').value,status:sched?'scheduled':'published',at:new Date().toISOString(),when:when});
@@ -934,11 +936,11 @@ function renderPubSeg(){var seg=$('#pubSeg').value;
   var os=DB.orders.filter(function(o){return o.customer_phone==='+1'+c.wa;});
   if(seg==='calzado')return os.some(function(o){return o.items.some(function(it){var p=findP(it.pid);return p&&p.cat==='Calzado';});});
   return os.some(function(o){return o.status==='entregado'&&(Date.now()-new Date(o.created_at))/86400000<=90;});});
- var p=findP($('#pubSeg').value);if(!p){$('#pubSegList').innerHTML='';return;}
+ var p=findP($('#pubSel').value);if(!p){$('#pubSegList').innerHTML='';return;}
  $('#pubSegList').innerHTML=list.map(function(c){return '<div class="row" style="margin-bottom:8px"><div class="row-main"><b>'+esc(c.name)+'</b><small>+1 '+esc(c.wa)+'</small></div><a class="btn btn-wa" style="padding:8px 14px;font-size:12px" target="_blank" rel="noopener noreferrer" href="https://wa.me/'+c.wa+'?text='+encodeURIComponent('Hola '+c.name.split(' ')[0]+' 👋 Llegó '+p.name+' a '+fmt(p.price)+'. Míralo: '+storeUrl()+'/p/'+p.id)+'">1-tap</a></div>';}).join('')||'<small style="color:var(--text2)">Sin clientes en este segmento.</small>';}
 /* config */
 function renderConfig(b){var s=DB.settings;
- b.innerHTML='<div class="finance-section" style="padding:22px">'+
+ b.innerHTML='<div class="finance-section">'+
   '<div style="display:flex;align-items:flex-start;gap:18px;flex-wrap:wrap">'+
    '<div class="imgprev" style="width:80px;height:80px" id="logoPrev">'+(DB.logo?'<img src="'+DB.logo+'" alt="">':ic('cam',24))+'</div>'+
    '<div style="flex:1;min-width:280px">'+
@@ -954,19 +956,19 @@ function renderConfig(b){var s=DB.settings;
    '</div>'+
   '</div>'+
  '</div>'+
- '<div class="finance-section" style="padding:22px"><h3 style="font-size:17px;font-weight:700;margin-bottom:14px">Umbrales y promociones</h3>'+
+ '<div class="finance-section"><h3 style="font-size:17px;font-weight:700;margin-bottom:14px">Umbrales y promociones</h3>'+
   '<div class="fgrid"><div class="field"><label>Umbral envío gratis (RD$)</label><input class="inp" id="cfgFree" type="number" value="'+s.free_threshold+'"></div>'+
   '<div class="field"><label>Umbral low-stock</label><input class="inp" id="cfgLow" type="number" value="'+s.low_stock+'"></div></div>'+
   '<div class="fgrid"><div class="field"><label>Promo: subtotal mín.</label><input class="inp" id="cfgPMin" type="number" value="'+s.promo.min+'"></div><div class="field"><label>Promo: % desc.</label><input class="inp" id="cfgPPct" type="number" value="'+s.promo.percent+'"></div></div>'+
   '<button class="btn btn-outline" onclick="saveCfg()">Guardar umbrales y promo</button>'+
  '</div>'+
- '<div class="finance-section" style="padding:22px"><h3 style="font-size:17px;font-weight:700;margin-bottom:14px">Métodos de envío</h3>'+
+ '<div class="finance-section"><h3 style="font-size:17px;font-weight:700;margin-bottom:14px">Métodos de envío</h3>'+
   s.shipping.map(function(m,i){return '<div class="row" style="margin-bottom:8px"><div class="row-main"><b>'+esc(m.label)+'</b><small>'+esc(m.eta)+'</small></div><input type="number" value="'+m.price+'" style="width:110px;padding:8px;border:1.5px solid var(--border);border-radius:10px;background:var(--surface2);color:var(--text)" onchange="DB.settings.shipping['+i+'].price=parseFloat(this.value)||0;persist();toast(\'Envío actualizado\',\'good\')"></div>';}).join('')+
  '</div>'+
- '<div class="finance-section" style="padding:22px"><h3 style="font-size:17px;font-weight:700;margin-bottom:14px">Contra entrega por zona</h3>'+
+ '<div class="finance-section"><h3 style="font-size:17px;font-weight:700;margin-bottom:14px">Contra entrega por zona</h3>'+
   '<div class="chips">'+['ZONA_SD','ZONA_CIBAO','ZONA_ESTE','ZONA_SUR'].map(function(z){return '<button class="chip '+(s.cod_zones.indexOf(z)!==-1?'on':'')+'" onclick="toggleCod(\''+z+'\')">'+z+'</button>';}).join('')+'</div>'+
  '</div>'+
- '<div class="finance-section" style="padding:22px"><h3 style="font-size:17px;font-weight:700;margin-bottom:14px">Cuentas bancarias</h3>'+
+ '<div class="finance-section"><h3 style="font-size:17px;font-weight:700;margin-bottom:14px">Cuentas bancarias</h3>'+
   s.payments.filter(function(p){return p.type==='transfer';}).map(function(p){var i=s.payments.indexOf(p);
    return '<div class="row" style="margin-bottom:8px"><div class="row-main"><input class="inp" value="'+esc(p.bank)+'" style="font-weight:700" onchange="DB.settings.payments['+i+'].bank=this.value;persist()">'+
    '<input class="inp" value="'+esc(p.acct)+' · '+esc(p.holder)+'" style="margin-top:6px;font-size:12px" onchange="var v=this.value.split(\'·\');DB.settings.payments['+i+'].acct=(v[0]||\'\').trim();DB.settings.payments['+i+'].holder=(v[1]||\'\').trim();persist()"></div>'+
