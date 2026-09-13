@@ -1,9 +1,26 @@
-/* ═════════ CatálogoYa v2.2 · app.js ═════════
-   Núcleo público: iconos, tema, storage, auth local, catálogo,
-   carrito, checkout y confirmación con WhatsApp.
-   Requiere: supabase-config.js · Complemento: admin.js (panel + arranque) */
+/* ═══════════════════════════════════════════════════════════
+   CatálogoYa v2.2 · app.js — NÚCLEO PÚBLICO (storefront)
+   ───────────────────────────────────────────────────────────
+   QUÉ HACE: todo lo que ve y usa un visitante sin login:
+   catálogo, ficha de producto, carrito, checkout y pedido WhatsApp.
+   DEPENDE DE: supabase-config.js (sb, SB_ON, SB_HANDLE)
+   PAREJA: admin.js (panel, sincronización Supabase y arranque)
+   MAPA DE SECCIONES (en orden de aparición):
+   1 ICONOS    → SVG que se usan con ic('nombre')
+   2 TEMA      → claro/oscuro, tiles de producto (applyTheme, tileOpen)
+   3 ESTADO    → localStorage, tienda demo, globales (DB, cart, state)
+   4 HELPERS   → fmt, esc, toast, modales, compartir archivos
+   5 AUTH      → login/registro LOCAL (admin.js los reemplaza si hay Supabase)
+   6 CARRITO   → agregar/quitar/cantidades, drawer, TARJETA CANVAS de
+                  consulta de disponibilidad (drawAvailabilityCard)
+   7 CATÁLOGO  → hero, categorías, grid, ficha (sheet)
+   8 CHECKOUT  → 2 pasos, crear pedido, confirmación y mensaje WhatsApp
+   REGLA: las funciones se llaman desde onclick="" en HTML y desde
+   strings generados en JS. Buscar el nombre en los 5 archivos
+   antes de borrar o renombrar cualquier función.
+   ═══════════════════════════════════════════════════════════ */
 
-/* ICONOS */
+/* 1 · ICONOS */
 var ICON={
  cart:'<circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/>',
  search:'<circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>',
@@ -35,7 +52,6 @@ var ICON={
  bell:'<path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/>',
  exit:'<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/>',
  eye:'<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>',
- cal:'<rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>',
  copy:'<rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>'
 };
 function ic(n,s){return '<svg width="'+(s||18)+'" height="'+(s||18)+'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'+ICON[n]+'</svg>';}
@@ -43,7 +59,7 @@ function icWa(s){return '<svg width="'+(s||18)+'" height="'+(s||18)+'" viewBox="
 function catIcon(c){return c==='Ropa'?'shirt':c==='Calzado'?'shoe':c==='Accesorios'?'bag':'box';}
 var SUBCATS={Ropa:['Camisas','Pantalones','Vestidos','Chaquetas','Faldas'],Accesorios:['Aros','Bolsos','Pañuelos','Collares'],Calzado:['Sandalias','Botines','Sneakers','Tacón'],General:['Otros']};
 
-/* TEMA */
+/* 2 · TEMA */
 function curTheme(){return document.documentElement.getAttribute('data-theme')||'light';}
 function toggleTheme(){applyTheme(curTheme()==='dark'?'light':'dark');}
 function applyTheme(t){document.documentElement.setAttribute('data-theme',t);LSset('cy2-theme',t);
@@ -56,7 +72,7 @@ function tileOpen(p,cls){if(p.image)return '<div class="tile '+(cls||'')+'" styl
 function swHTML(p){if(p.image)return '<div class="sw" style="background-image:url('+p.image+')"></div>';
  var c=tileC(p);return '<div class="sw" style="background:'+c.bg+';color:'+c.fg+'">'+ic(catIcon(p.cat),20)+'</div>';}
 
-/* STORAGE LOCAL + ESTADO BASE */
+/* 3 · ESTADO */
 function LSget(k){try{return window.localStorage.getItem(k);}catch(e){return null;}}
 function LSset(k,v){try{window.localStorage.setItem(k,v);}catch(e){}}
 function LSdel(k){try{window.localStorage.removeItem(k);}catch(e){}}
@@ -117,7 +133,7 @@ var state={view:'auth',cat:'Todo',subcat:'Todo',q:'',sheet:null,sel:{},qty:1,tab
 function storePhone(){return (DB&&DB.phone)||'18095550143';}
 function storeUrl(){return 'https://'+((DB&&DB.handle)||'alma.bazar')+'.catya.do';}
 
-/* HELPERS */
+/* 4 · HELPERS */
 function $(s){return document.querySelector(s);}
 function esc(s){s=(s===null||s===undefined)?'':String(s);return s.replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
 function fmt(n){return 'RD$ '+new Intl.NumberFormat('es-DO',{maximumFractionDigits:0}).format(Math.round(n));}
@@ -167,7 +183,7 @@ function openModal(html){$('#modalSlot').innerHTML='<div class="modal" style="po
 function closeModal(){confirmCb=null;$('#modalSlot').innerHTML='';$('#modalBk').className='bk';}
 function toggleShipDetails(){var b=$('#shipDetails');if(b)b.classList.toggle('open');}
 
-/* AUTH LOCAL */
+/* 5 · AUTH LOCAL */
 function authTab(t){$('#authTabLogin').className='chip '+(t==='login'?'on':'');$('#authTabReg').className='chip '+(t==='reg'?'on':'');
  $('#authLogin').style.display=t==='login'?'block':'none';$('#authReg').style.display=t==='reg'?'block':'none';}
 function autoHandle(v){$('#rgHandle').value=slug(v);}
@@ -188,7 +204,7 @@ function doRegister(){var n=$('#rgName').value.trim(),h=slug($('#rgHandle').valu
  toast('🎉 Tienda "'+n+'" creada. Agrega tu primer producto.','good');setTimeout(function(){openAdmin();state.tab='inventario';renderAdmin();openProd();},600);}
 function enterApp(){applyTheme(curTheme());renderCartBadge();show('tienda');}
 
-/* CARRITO */
+/* 6 · CARRITO */
 function vkey(v){var ks=Object.keys(v).sort(),out=[];ks.forEach(function(k){out.push(k+'='+v[k]);});return out.join('|');}
 function addToCart(pid,variant,qty){var p=findP(pid);if(!p||p.stock<=0)return;var key=vkey(variant),found=null;
  cart.forEach(function(l){if(l.pid===pid&&l.vkey===key)found=l;});
@@ -200,23 +216,88 @@ function renderCartBadge(){var n=0;cart.forEach(function(l){n+=l.qty;});var t='R
  if(DB){t=fmt(cartCalc().net);}$('#fabCart').innerHTML=ic('cart',18)+'<span>'+t+' · '+n+'</span>';}
 function openCart(){$('#cartBk').className='bk show';$('#cartDr').className='drawer show';renderCart();}
 function closeCart(){$('#cartBk').className='bk';$('#cartDr').className='drawer';}
-function availabilityMessage(){var c=cartCalc();var L=[];
- L.push('*Consulta de disponibilidad — '+DB.name+'*');
- L.push('¡Hola! Me interesan los artículos de las fotos. ¿Tienen disponibilidad para entrega o envío inmediato?');
- L.push('');
- c.lines.forEach(function(x){var v=Object.keys(x.l.variant).map(function(k){return x.l.variant[k];}).join(' · ');
-  L.push('• '+x.p.name+(v?' · '+v:'')+' — '+fmt(x.p.price)+(x.p.stock<=0?' — ⛔ Agotado':''));});
- L.push('');
- L.push('🧺 Total estimado: *'+fmt(c.net)+'*');
- L.push('Opciones:');
- L.push('Completa la compra aquí → '+storeUrl()+'?t='+DB.handle);
- L.push('¡Quedo a la espera de su confirmación! Muchas gracias.');
- return L.join('\n');}
-function confirmAvailability(){if(!cart.length)return toast('Tu carrito está vacío','warn');
- var c=cartCalc(),msg=availabilityMessage();
- var imgs=c.lines.map(function(x){return x.p.image;});
- if(shareFiles(msg,imgs)){toast('Abriendo WhatsApp con las fotos del carrito…','good');}
- else{openWaText(msg);toast(imgs.some(function(i){return i;})?'Tu dispositivo no adjunta fotos solo: se abrió el chat con el detalle para que las adjuntes':'Chat abierto con la consulta','warn');}}
+
+/* ── TARJETA CANVAS: consulta de disponibilidad (1 imagen profesional) ── */
+function wrapText(ctx,text,maxW){var words=text.split(' '),lines=[],cur='';
+ for(var i=0;i<words.length;i++){var t=cur?cur+' '+words[i]:words[i];
+  if(ctx.measureText(t).width>maxW&&cur){lines.push(cur);cur=words[i];}else cur=t;}
+ if(cur)lines.push(cur);return lines;}
+function roundRectPath(ctx,x,y,w,h,r){ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath();}
+function drawCover(ctx,im,x,y,w,h){var ir=im.width/im.height,r=w/h,sx=0,sy=0,sw=im.width,sh=im.height;
+ if(ir>r){sw=sh*r;sx=(im.width-sw)/2;}else{sh=sw/r;sy=(im.height-sh)/2;}
+ ctx.drawImage(im,sx,sy,sw,sh,x,y,w,h);}
+function cardVisual(line){
+ return new Promise(function(res){
+  var out={img:null,svg:false,bg:'hsl('+line.p.hue+',70%,92%)',fg:'hsl('+line.p.hue+',45%,35%)'};
+  if(line.p.image){var im=new Image();im.onload=function(){out.img=im;res(out);};im.onerror=function(){res(out);};im.src=line.p.image;return;}
+  var svg='<svg xmlns="http://www.w3.org/2000/svg" width="140" height="140" viewBox="0 0 24 24" fill="none" stroke="'+out.fg+'" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">'+ICON[catIcon(line.p.cat)]+'</svg>';
+  var url=URL.createObjectURL(new Blob([svg],{type:'image/svg+xml'}));
+  var im2=new Image();im2.onload=function(){out.img=im2;out.svg=true;URL.revokeObjectURL(url);res(out);};im2.onerror=function(){URL.revokeObjectURL(url);res(out);};im2.src=url;
+ });}
+function drawAvailabilityCard(lines,total){
+ return new Promise(function(resolve){
+  Promise.all(lines.map(cardVisual)).then(function(vis){
+   var W=1080,pad=64,gap=26,cols=2,F='Inter, Arial, sans-serif';
+   var cardW=(W-pad*2-gap)/2, imgH=Math.round(cardW*0.72), infoH=170, cardH=imgH+infoH;
+   var rows=Math.ceil(lines.length/cols);
+   var c=document.createElement('canvas'),ctx=c.getContext('2d');
+   ctx.font='700 46px '+F; var titleL=wrapText(ctx,'Consulta de disponibilidad — '+DB.name,W-pad*2);
+   ctx.font='400 36px '+F; var introL=wrapText(ctx,'¡Hola! Me interesan los artículos de las fotos. ¿Tienen disponibilidad para entrega o envío inmediato?',W-pad*2);
+   ctx.font='400 34px '+F; var closeL=wrapText(ctx,'¡Quedo a la espera de su confirmación! Muchas gracias.',W-pad*2);
+   var y=pad, titleH=titleL.length*58, introH=introL.length*50;
+   var gridY=y+titleH+26+introH+44;
+   var gridH=rows*cardH+(rows-1)*gap;
+   var totalY=gridY+gridH+64, optY=totalY+64, linkY=optY+56, closeY=linkY+64;
+   var H=closeY+closeL.length*48+pad;
+   c.width=W;c.height=H;
+   ctx.fillStyle='#0b4a3c'; roundRectPath(ctx,0,0,W,H,44); ctx.fill();
+   ctx.textBaseline='top';
+   ctx.fillStyle='#ffffff'; ctx.font='700 46px '+F;
+   titleL.forEach(function(l,i){ctx.fillText(l,pad,y+i*58);});
+   ctx.fillStyle='rgba(255,255,255,.92)'; ctx.font='400 36px '+F;
+   introL.forEach(function(l,i){ctx.fillText(l,pad,y+titleH+26+i*50);});
+   lines.forEach(function(ln,i){
+     var col=i%2,row=Math.floor(i/2);
+     var x=pad+col*(cardW+gap), yy=gridY+row*(cardH+gap);
+     ctx.save(); roundRectPath(ctx,x,yy,cardW,cardH,26); ctx.clip();
+     ctx.fillStyle='#f7f8f8'; ctx.fillRect(x,yy,cardW,cardH);
+     var v=vis[i];
+     ctx.fillStyle=v.bg; ctx.fillRect(x,yy,cardW,imgH);
+     if(v.img){ if(v.svg){var s=150;ctx.drawImage(v.img,x+(cardW-s)/2,yy+(imgH-s)/2,s,s);} else drawCover(ctx,v.img,x,yy,cardW,imgH); }
+     ctx.fillStyle='#1c1c1e'; ctx.font='600 34px '+F;
+     var nl=wrapText(ctx,ln.p.name,cardW-40).slice(0,2);
+     nl.forEach(function(k,kk){ctx.fillText(k,x+20,yy+imgH+16+kk*42);});
+     var priceY=yy+imgH+16+nl.length*42+8;
+     if(ln.p.stock<=0){ctx.fillStyle='#b3261e';ctx.font='500 32px '+F;ctx.fillText('Agotado',x+20,priceY);}
+     else{ctx.fillStyle='#6b6b70';ctx.font='400 32px '+F;ctx.fillText(fmt(ln.p.price),x+20,priceY);}
+     ctx.restore();
+   });
+   ctx.fillStyle='#ffffff'; ctx.font='400 40px '+F;
+   var t1='🧺  Total estimado: '; ctx.fillText(t1,pad,totalY);
+   var w1=ctx.measureText(t1).width; ctx.font='700 40px '+F; ctx.fillText(fmt(total),pad+w1,totalY);
+   ctx.font='400 36px '+F; ctx.fillText('Opciones:',pad,optY);
+   ctx.fillStyle='#7cc0f4'; ctx.fillText('Presiona aquí para completar la compra  →',pad,linkY);
+   ctx.fillStyle='#ffffff'; ctx.font='400 34px '+F;
+   closeL.forEach(function(l,i){ctx.fillText(l,pad,closeY+i*48);});
+   resolve(c.toDataURL('image/jpeg',0.92));
+  });
+ });}
+function availabilityCaption(c){
+ return 'Consulta de disponibilidad — '+DB.name+
+  '\n🧺 Total estimado: '+fmt(c.net)+
+  '\n👉 Completa la compra aquí: '+storeUrl()+'?t='+DB.handle;}
+async function confirmAvailability(){
+  if(!cart.length)return toast('Tu carrito está vacío','warn');
+  var c=cartCalc();
+  toast('Generando tarjeta de consulta…','good');
+  if(document.fonts&&document.fonts.ready){try{await document.fonts.ready;}catch(e){}}
+  var data=await drawAvailabilityCard(c.lines,c.net);
+  var caption=availabilityCaption(c);
+  if(shareFiles(caption,[data])){toast('Tarjeta enviada como una sola imagen ✔','good');}
+  else{downloadData(data,'consulta-disponibilidad.jpg');openWaText(caption);
+   toast('Tu navegador no comparte imágenes: se descargó la tarjeta y se abrió el chat para que la adjuntes','warn');}
+}
+
 function renderCart(){var c=cartCalc();
  $('#cartHd').innerHTML='<div style="display:flex;align-items:center"><b style="font-size:18px;font-weight:700;flex:1">Tu carrito</b><button class="icon-btn" onclick="closeCart()">'+ic('x',18)+'</button></div>';
  if(!c.lines.length){$('#cartBd').innerHTML='<p style="text-align:center;color:var(--text2);padding:50px 0">Tu carrito está vacío.</p>';$('#cartFt').innerHTML='';return;}
@@ -235,7 +316,7 @@ var lastRemoved=null;
 function removeLine(i){lastRemoved={line:cart[i],i:i};cart.splice(i,1);persistCart();renderCartBadge();renderCart();
  toast('Artículo removido','warn','DESHACER',function(){cart.splice(lastRemoved.i,0,lastRemoved.line);persistCart();renderCartBadge();renderCart();});}
 
-/* CATÁLOGO + HERO */
+/* 7 · CATÁLOGO */
 function cats(){var seen={},out=['Todo'];DB.products.forEach(function(p){if(!seen[p.cat]){seen[p.cat]=1;out.push(p.cat);}});return out;}
 function renderStoreHead(){
  var ini=DB.name.slice(0,2).toUpperCase();
@@ -300,7 +381,7 @@ function renderSheet(){var p=state.sheet;if(!p)return;var sold=p.stock<=0;
    :'<button class="btn btn-primary" style="width:100%" onclick="addToCart(\''+p.id+'\',state.sel,state.qty);closeSheet()">'+ic('cart',17)+'Agregar · '+fmt(p.price*state.qty)+'</button>'+
     '<a class="btn btn-wa" style="width:100%;margin-top:10px" href="'+wa+'" target="_blank" rel="noopener noreferrer">'+icWa(17)+'Preguntar por WhatsApp</a>');}
 
-/* CHECKOUT + CONFIRMACIÓN */
+/* 8 · CHECKOUT + CONFIRMACIÓN */
 var PROVINCES_LIST=['Distrito Nacional','Santo Domingo Este','Santo Domingo Oeste','Santo Domingo Norte','Santiago','La Vega','Puerto Plata','Punta Cana','La Romana','San Pedro de Macorís','San Cristóbal','Barahona'];
 function openCheckout(){if(!cart.length){toast('Tu carrito está vacío','warn');return;}closeCart();
  state.co={step:1,name:'',prefix:'809',phone:'',province:'',shipId:'',address:'',pickupId:'',notes:'',payId:'',bankId:''};
