@@ -11,10 +11,12 @@
    3 ESTADO    → localStorage, tienda demo, globales (DB, cart, state)
    4 HELPERS   → fmt, esc, toast, modales, compartir archivos
    5 AUTH      → login/registro LOCAL (admin.js los reemplaza si hay Supabase)
-   6 CARRITO   → agregar/quitar/cantidades, drawer, TARJETA CANVAS de
-                  consulta de disponibilidad (drawAvailabilityCard)
+   6 CARRITO   → agregar/quitar/cantidades, drawer, TARJETA CANVAS v2
+                  (drawAvailabilityCard: solo productos; el total y el
+                  link viajan en el texto anexo de WhatsApp)
    7 CATÁLOGO  → hero, categorías, grid, ficha (sheet)
    8 CHECKOUT  → 2 pasos, crear pedido, confirmación y mensaje WhatsApp
+   9 DEEP-LINK → ?completar=1 abre directo el checkout del cliente
    REGLA: las funciones se llaman desde onclick="" en HTML y desde
    strings generados en JS. Buscar el nombre en los 5 archivos
    antes de borrar o renombrar cualquier función.
@@ -217,81 +219,75 @@ function renderCartBadge(){var n=0;cart.forEach(function(l){n+=l.qty;});var t='R
 function openCart(){$('#cartBk').className='bk show';$('#cartDr').className='drawer show';renderCart();}
 function closeCart(){$('#cartBk').className='bk';$('#cartDr').className='drawer';}
 
-/* ── TARJETA CANVAS: consulta de disponibilidad (1 imagen profesional) ── */
+/* ── TARJETA CANVAS v2: solo productos (total y link van en el texto anexo) ── */
 function wrapText(ctx,text,maxW){var words=text.split(' '),lines=[],cur='';
  for(var i=0;i<words.length;i++){var t=cur?cur+' '+words[i]:words[i];
   if(ctx.measureText(t).width>maxW&&cur){lines.push(cur);cur=words[i];}else cur=t;}
  if(cur)lines.push(cur);return lines;}
 function roundRectPath(ctx,x,y,w,h,r){ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath();}
-function drawCover(ctx,im,x,y,w,h){var ir=im.width/im.height,r=w/h,sx=0,sy=0,sw=im.width,sh=im.height;
- if(ir>r){sw=sh*r;sx=(im.width-sw)/2;}else{sh=sw/r;sy=(im.height-sh)/2;}
- ctx.drawImage(im,sx,sy,sw,sh,x,y,w,h);}
+function drawContain(ctx,im,x,y,w,h){var ir=im.width/im.height,r=w/h,dw,dh;
+ if(ir>r){dw=w;dh=w/ir;}else{dh=h;dw=h*ir;}
+ ctx.drawImage(im,x+(w-dw)/2,y+(h-dh)/2,dw,dh);}
 function cardVisual(line){
  return new Promise(function(res){
-  var out={img:null,svg:false,bg:'hsl('+line.p.hue+',70%,92%)',fg:'hsl('+line.p.hue+',45%,35%)'};
+  var out={img:null,bg:'hsl('+line.p.hue+',55%,66%)'};
   if(line.p.image){var im=new Image();im.onload=function(){out.img=im;res(out);};im.onerror=function(){res(out);};im.src=line.p.image;return;}
-  var svg='<svg xmlns="http://www.w3.org/2000/svg" width="140" height="140" viewBox="0 0 24 24" fill="none" stroke="'+out.fg+'" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">'+ICON[catIcon(line.p.cat)]+'</svg>';
-  var url=URL.createObjectURL(new Blob([svg],{type:'image/svg+xml'}));
-  var im2=new Image();im2.onload=function(){out.img=im2;out.svg=true;URL.revokeObjectURL(url);res(out);};im2.onerror=function(){URL.revokeObjectURL(url);res(out);};im2.src=url;
+  res(out);
  });}
-function drawAvailabilityCard(lines,total){
+function drawAvailabilityCard(lines){
  return new Promise(function(resolve){
   Promise.all(lines.map(cardVisual)).then(function(vis){
-   var W=1080,pad=64,gap=26,cols=2,F='Inter, Arial, sans-serif';
-   var cardW=(W-pad*2-gap)/2, imgH=Math.round(cardW*0.72), infoH=170, cardH=imgH+infoH;
-   var rows=Math.ceil(lines.length/cols);
+   var W=1080,pad=88,gap=32,F='Inter, Arial, sans-serif',FS='Georgia, "Times New Roman", serif';
    var c=document.createElement('canvas'),ctx=c.getContext('2d');
-   ctx.font='700 46px '+F; var titleL=wrapText(ctx,'Consulta de disponibilidad — '+DB.name,W-pad*2);
-   ctx.font='400 36px '+F; var introL=wrapText(ctx,'¡Hola! Me interesan los artículos de las fotos. ¿Tienen disponibilidad para entrega o envío inmediato?',W-pad*2);
-   ctx.font='400 34px '+F; var closeL=wrapText(ctx,'¡Quedo a la espera de su confirmación! Muchas gracias.',W-pad*2);
-   var y=pad, titleH=titleL.length*58, introH=introL.length*50;
-   var gridY=y+titleH+26+introH+44;
+   ctx.font='400 40px '+FS; var storeL=wrapText(ctx,DB.name,W-pad*2);
+   ctx.font='800 84px '+F;  var titleL=wrapText(ctx,'Consulta de disponibilidad',W-pad*2);
+   ctx.font='400 42px '+F;  var introL=wrapText(ctx,'¡Hola! Me interesan los artículos de las fotos. ¿Siguen disponibles? ¿Tienen disponibilidad para entrega?',W-pad*2);
+   var cardW=(W-pad*2-gap)/2, imgH=Math.round(cardW*1.0), infoH=190, cardH=imgH+infoH;
+   var rows=Math.ceil(lines.length/2);
+   var y=pad, storeH=storeL.length*52, titleH=titleL.length*96, introH=introL.length*60;
+   var gridY=y+storeH+28+titleH+44+introH+64;
    var gridH=rows*cardH+(rows-1)*gap;
-   var totalY=gridY+gridH+64, optY=totalY+64, linkY=optY+56, closeY=linkY+64;
-   var H=closeY+closeL.length*48+pad;
+   var H=gridY+gridH+pad;
    c.width=W;c.height=H;
-   ctx.fillStyle='#0b4a3c'; roundRectPath(ctx,0,0,W,H,44); ctx.fill();
+   ctx.fillStyle='#15251d'; roundRectPath(ctx,0,0,W,H,56); ctx.fill();
    ctx.textBaseline='top';
-   ctx.fillStyle='#ffffff'; ctx.font='700 46px '+F;
-   titleL.forEach(function(l,i){ctx.fillText(l,pad,y+i*58);});
-   ctx.fillStyle='rgba(255,255,255,.92)'; ctx.font='400 36px '+F;
-   introL.forEach(function(l,i){ctx.fillText(l,pad,y+titleH+26+i*50);});
+   ctx.fillStyle='#aec0b6'; ctx.font='400 40px '+FS;
+   storeL.forEach(function(l,i){ctx.fillText(l,pad,y+i*52);});
+   ctx.fillStyle='#f4f6f4'; ctx.font='800 84px '+F;
+   titleL.forEach(function(l,i){ctx.fillText(l,pad,y+storeH+28+i*96);});
+   ctx.fillStyle='#c9d5ce'; ctx.font='400 42px '+F;
+   introL.forEach(function(l,i){ctx.fillText(l,pad,y+storeH+28+titleH+44+i*60);});
    lines.forEach(function(ln,i){
      var col=i%2,row=Math.floor(i/2);
      var x=pad+col*(cardW+gap), yy=gridY+row*(cardH+gap);
-     ctx.save(); roundRectPath(ctx,x,yy,cardW,cardH,26); ctx.clip();
-     ctx.fillStyle='#f7f8f8'; ctx.fillRect(x,yy,cardW,cardH);
      var v=vis[i];
+     ctx.save(); roundRectPath(ctx,x,yy,cardW,cardH,28); ctx.clip();
      ctx.fillStyle=v.bg; ctx.fillRect(x,yy,cardW,imgH);
-     if(v.img){ if(v.svg){var s=150;ctx.drawImage(v.img,x+(cardW-s)/2,yy+(imgH-s)/2,s,s);} else drawCover(ctx,v.img,x,yy,cardW,imgH); }
-     ctx.fillStyle='#1c1c1e'; ctx.font='600 34px '+F;
-     var nl=wrapText(ctx,ln.p.name,cardW-40).slice(0,2);
-     nl.forEach(function(k,kk){ctx.fillText(k,x+20,yy+imgH+16+kk*42);});
-     var priceY=yy+imgH+16+nl.length*42+8;
-     if(ln.p.stock<=0){ctx.fillStyle='#b3261e';ctx.font='500 32px '+F;ctx.fillText('Agotado',x+20,priceY);}
-     else{ctx.fillStyle='#6b6b70';ctx.font='400 32px '+F;ctx.fillText(fmt(ln.p.price),x+20,priceY);}
+     if(v.img) drawContain(ctx,v.img,x,yy,cardW,imgH);
+     ctx.fillStyle='#20302a'; ctx.fillRect(x,yy+imgH,cardW,infoH);
+     ctx.fillStyle='#ffffff'; ctx.font='600 42px '+F;
+     var nl=wrapText(ctx,ln.p.name,cardW-48).slice(0,2);
+     nl.forEach(function(l,k){ctx.fillText(l,x+24,yy+imgH+26+k*50);});
+     ctx.fillStyle='#a9bab0'; ctx.font='400 40px '+F;
+     ctx.fillText(fmt(ln.p.price),x+24,yy+imgH+26+nl.length*50+6);
      ctx.restore();
    });
-   ctx.fillStyle='#ffffff'; ctx.font='400 40px '+F;
-   var t1='🧺  Total estimado: '; ctx.fillText(t1,pad,totalY);
-   var w1=ctx.measureText(t1).width; ctx.font='700 40px '+F; ctx.fillText(fmt(total),pad+w1,totalY);
-   ctx.font='400 36px '+F; ctx.fillText('Opciones:',pad,optY);
-   ctx.fillStyle='#7cc0f4'; ctx.fillText('Presiona aquí para completar la compra  →',pad,linkY);
-   ctx.fillStyle='#ffffff'; ctx.font='400 34px '+F;
-   closeL.forEach(function(l,i){ctx.fillText(l,pad,closeY+i*48);});
    resolve(c.toDataURL('image/jpeg',0.92));
   });
  });}
+function checkoutUrl(){return storeUrl()+'?t='+DB.handle+'&completar=1';}
 function availabilityCaption(c){
  return 'Consulta de disponibilidad — '+DB.name+
   '\n🧺 Total estimado: '+fmt(c.net)+
-  '\n👉 Completa la compra aquí: '+storeUrl()+'?t='+DB.handle;}
+  '\n👉 Completa la compra aquí:'+
+  '\n'+checkoutUrl()+
+  '\n¡Quedo a la espera de su confirmación! Muchas gracias.';}
 async function confirmAvailability(){
   if(!cart.length)return toast('Tu carrito está vacío','warn');
   var c=cartCalc();
   toast('Generando tarjeta de consulta…','good');
   if(document.fonts&&document.fonts.ready){try{await document.fonts.ready;}catch(e){}}
-  var data=await drawAvailabilityCard(c.lines,c.net);
+  var data=await drawAvailabilityCard(c.lines);
   var caption=availabilityCaption(c);
   if(shareFiles(caption,[data])){toast('Tarjeta enviada como una sola imagen ✔','good');}
   else{downloadData(data,'consulta-disponibilidad.jpg');openWaText(caption);
@@ -495,3 +491,19 @@ function renderConfirm(o){var pm=payLabel(o.payment_method),msg=waOrderMessage(o
   '<button class="btn btn-primary" onclick="goTienda()">Seguir comprando</button></div></div>';}
 function markWaSent(id){var o=findO(id);if(o&&!o.wa_sent_at){o.wa_sent_at=new Date().toISOString();persist();toast('Pedido transmitido al vendedor ✔','good');}}
 function uploadProof(id){findO(id).proof=true;persist();toast('Comprobante recibido ✔','good');}
+
+/* 9 · DEEP-LINK: ?completar=1 abre directo el checkout del cliente */
+(function(){
+  if(window.location.search.indexOf('completar=')===-1) return;
+  var tries=0;
+  var t=setInterval(function(){
+    tries++;
+    if(DB && state.view==='tienda'){
+      clearInterval(t);
+      setTimeout(function(){
+        if(cart.length){ openCheckout(); }
+        else{ toast('Tu carrito está vacío: agrega productos para completar tu pedido','warn'); }
+      },500);
+    } else if(tries>60){ clearInterval(t); }
+  },250);
+})();
