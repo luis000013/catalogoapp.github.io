@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- CatálogoYa v2.2 · estructura dividida -->
+<!-- CatálogoYa v2.2 · estructura dividida (index + styles.css + supabase-config.js + app.js + admin.js) -->
 <html lang="es" data-theme="light">
 <head>
 <meta charset="UTF-8">
@@ -90,7 +90,9 @@
 </div></div>
 <div id="toasts"></div>
 
+<!-- ORDEN DE CARGA (no cambiar): config → app → admin -->
 <script src="supabase-config.js"></script>
 <script src="app.js"></script>
+<script src="admin.js"></script>
 </body>
 </html>
