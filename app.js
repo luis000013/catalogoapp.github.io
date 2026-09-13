@@ -1,19 +1,19 @@
 /* ═══════════════════════════════════════════════════════════
-   CatálogoYa v2.3 · app.js — NÚCLEO PÚBLICO (storefront)
+   CatálogoYa v2.4 · app.js — NÚCLEO PÚBLICO (storefront)
    ───────────────────────────────────────────────────────────
    MAPA DE SECCIONES:
    1 ICONOS    → SVG usados con ic('nombre')
    2 TEMA      → claro/oscuro, tiles (applyTheme, tileOpen)
    3 ESTADO    → localStorage, tienda demo, globales (DB, cart, state)
-   4 HELPERS   → fmt, esc, toast, modales, portapapeles, wa.me directo
+   4 HELPERS   → fmt, esc, toast, modales, portapapeles, WhatsApp
    5 AUTH      → login/registro LOCAL (admin.js los reemplaza con Supabase)
    6 CARRITO   → drawer + TARJETAS CANVAS (consulta y pedido)
    7 CATÁLOGO  → hero, categorías, grid, ficha
    8 CHECKOUT  → 2 pasos, crear pedido, confirmación
    9 DEEP-LINK → ?completar=1 abre directo el checkout
-   CAMBIOS v2.3: storeUrl() usa la URL real desplegada; los botones
-   de WhatsApp abren DIRECTO el chat del vendedor (wa.me) y la
-   tarjeta dibujada se copia al portapapeles / se descarga.
+   CAMBIO v2.4: sendCardToWhatsApp envía la tarjeta ADJUNTA con el
+   texto en móvil (navigator.share con archivo); en PC abre el chat
+   directo y deja la imagen copiada/descargada para pegar.
    ═══════════════════════════════════════════════════════════ */
 
 /* 1 · ICONOS */
@@ -128,7 +128,7 @@ var cart=(function(){var r=LSget('cy2-cart');if(r){try{var c=JSON.parse(r);if(c&
 function persistCart(){LSset('cy2-cart',JSON.stringify(cart));}
 var state={view:'auth',cat:'Todo',subcat:'Todo',q:'',sheet:null,sel:{},qty:1,tab:'pedidos',co:null,finPeriod:30,pf:{status:'todos',q:''}};
 function storePhone(){return (DB&&DB.phone)||'18095550143';}
-/* v2.3: URL REAL donde está desplegada la app (Vercel / local) */
+/* URL REAL donde está desplegada la app (Vercel / local) */
 function storeUrl(){return window.location.origin+window.location.pathname;}
 
 /* 4 · HELPERS */
@@ -165,7 +165,6 @@ function shareStore(){var u=storeUrl()+'?t='+DB.handle;
 function openWaText(text,phone){window.open('https://wa.me/'+(phone||storePhone())+'?text='+encodeURIComponent(text),'_blank');}
 function copyText(t){function fb(){var ta=document.createElement('textarea');ta.value=t;document.body.appendChild(ta);ta.select();try{document.execCommand('copy');}catch(e){}document.body.removeChild(ta);toast('Copiado ✔','good');}
  if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(t).then(function(){toast('Copiado ✔','good');},fb);}else fb();}
-/* v2.3: copia la tarjeta dibujada al portapapeles (PNG) */
 function copyImageToClipboard(dataUrl){
  return new Promise(function(res){
   try{
@@ -183,12 +182,23 @@ function copyImageToClipboard(dataUrl){
    img.src=dataUrl;
   }catch(e){res(false);}
  });}
-/* v2.3: abre DIRECTO el WhatsApp del vendedor + entrega la tarjeta */
+/* v2.4: MÓVIL → compartir del sistema con imagen+texto (la imagen SÍ llega
+   adjunta al chat). PC / sin share de archivos → chat directo + imagen
+   copiada al portapapeles o descargada para pegar/adjuntar. */
 async function sendCardToWhatsApp(imageData,text,phone){
+  var file=null;
+  try{ file=dataURLtoFile(imageData,'tarjeta-catya.jpg'); }catch(e){}
+  if(file && navigator.canShare && navigator.canShare({files:[file]})){
+    navigator.share({files:[file], text:text, title:'CatálogoYa'}).catch(function(err){
+      if(err && err.name==='AbortError'){ openWaText(text,phone); }
+    });
+    toast('Elige WhatsApp y el chat de la tienda: la imagen viaja con el texto','good');
+    return;
+  }
   var copied=await copyImageToClipboard(imageData);
   openWaText(text,phone);
-  if(copied){toast('📋 Tarjeta copiada: en el chat mantén pulsado y pega para enviarla como imagen','good');}
-  else{downloadData(imageData,'tarjeta-catya.jpg');toast('Imagen descargada: adjúntala en el chat con 📎','warn');}
+  if(copied){ toast('📋 Tarjeta copiada: en el chat mantén pulsado y pega','good'); }
+  else{ downloadData(imageData,'tarjeta-catya.jpg'); toast('Imagen descargada: adjúntala con 📎 en el chat','warn'); }
 }
 function svgIconImg(name,color,px){
  return new Promise(function(res){
@@ -318,7 +328,7 @@ async function confirmAvailability(){
   sendCardToWhatsApp(data, availabilityCaption(c), storePhone());
 }
 
-/* ── TARJETA PEDIDO: hasta la foto del último producto; el resto va en texto ── */
+/* ── TARJETA PEDIDO: hasta la foto del último producto; el resto en texto ── */
 function drawOrderCard(o){
  return new Promise(function(resolve){
   var visP=Promise.all(o.items.map(function(it){var p=findP(it.pid);return prodVisual(p||{hue:200,image:''});}));
@@ -374,7 +384,7 @@ function drawOrderCard(o){
    resolve(c.toDataURL('image/jpeg',0.92));
   });
  });}
-/* v2.3: el texto del pedido = de subtotal hacia abajo */
+/* Texto del pedido = de subtotal hacia abajo */
 function waOrderMessage(o){
   var L=[];
   L.push('Subtotal: '+fmt(o.subtotal));
@@ -561,7 +571,7 @@ function renderConfirm(o){var pm=payLabel(o.payment_method),msg=waOrderMessage(o
   '<h1 style="font-size:38px;font-weight:900;margin:12px 0 6px;letter-spacing:-.02em">#'+o.number+'</h1>'+
   '<p style="color:var(--text2);font-size:15px">Total '+fmt(o.total)+' · '+esc(pm.bank)+'</p>'+
   '<div style="margin:16px 0"><button class="btn btn-wa" style="width:100%" onclick="sendOrderWA(\''+o.id+'\')">'+icWa(18)+'Enviar pedido por WhatsApp</button></div>'+
-  '<p style="font-size:13px;color:var(--text2)">Se abre directo el WhatsApp del vendedor con el texto; la tarjeta con los artículos queda copiada para pegar en el chat.</p></div>'+
+  '<p style="font-size:13px;color:var(--text2)">En móvil se abre el compartir con la tarjeta y el texto juntos: elige WhatsApp y el chat de la tienda. En PC se abre el chat directo y la tarjeta queda copiada para pegar.</p></div>'+
   (pm.type==='transfer'?'<div class="conf-card"><b style="font-size:17px;font-weight:700">Datos para tu transferencia</b><div style="margin-top:12px">'+
    banks.map(function(b){return '<div class="bankline"><b>'+esc(b.bank)+'</b> '+esc(b.acct)+' · '+esc(b.holder)+'<button onclick="copyText(\''+esc(b.bank+' '+b.acct+' '+b.holder)+'\')">COPIAR</button></div>';}).join('')+
    '<div style="margin-top:12px"><label class="field" style="margin:0"><span style="font-size:12px;font-weight:700;color:var(--text2)">📎 Ya transferí — subir comprobante</span><input type="file" style="margin-top:8px" onchange="uploadProof(\''+o.id+'\')"></label></div></div>':'')+
