@@ -1,25 +1,19 @@
 /* ═══════════════════════════════════════════════════════════
-   CatálogoYa v2.2 · app.js — NÚCLEO PÚBLICO (storefront)
+   CatálogoYa v2.3 · app.js — NÚCLEO PÚBLICO (storefront)
    ───────────────────────────────────────────────────────────
-   QUÉ HACE: todo lo que ve y usa un visitante sin login:
-   catálogo, ficha de producto, carrito, checkout y pedido WhatsApp.
-   DEPENDE DE: supabase-config.js (sb, SB_ON, SB_HANDLE)
-   PAREJA: admin.js (panel, sincronización Supabase y arranque)
-   MAPA DE SECCIONES (en orden de aparición):
-   1 ICONOS    → SVG que se usan con ic('nombre')
-   2 TEMA      → claro/oscuro, tiles de producto (applyTheme, tileOpen)
+   MAPA DE SECCIONES:
+   1 ICONOS    → SVG usados con ic('nombre')
+   2 TEMA      → claro/oscuro, tiles (applyTheme, tileOpen)
    3 ESTADO    → localStorage, tienda demo, globales (DB, cart, state)
-   4 HELPERS   → fmt, esc, toast, modales, compartir archivos
-   5 AUTH      → login/registro LOCAL (admin.js los reemplaza si hay Supabase)
-   6 CARRITO   → agregar/quitar/cantidades, drawer, TARJETA CANVAS v2
-                  (drawAvailabilityCard: solo productos; el total y el
-                  link viajan en el texto anexo de WhatsApp)
-   7 CATÁLOGO  → hero, categorías, grid, ficha (sheet)
-   8 CHECKOUT  → 2 pasos, crear pedido, confirmación y mensaje WhatsApp
-   9 DEEP-LINK → ?completar=1 abre directo el checkout del cliente
-   REGLA: las funciones se llaman desde onclick="" en HTML y desde
-   strings generados en JS. Buscar el nombre en los 5 archivos
-   antes de borrar o renombrar cualquier función.
+   4 HELPERS   → fmt, esc, toast, modales, portapapeles, wa.me directo
+   5 AUTH      → login/registro LOCAL (admin.js los reemplaza con Supabase)
+   6 CARRITO   → drawer + TARJETAS CANVAS (consulta y pedido)
+   7 CATÁLOGO  → hero, categorías, grid, ficha
+   8 CHECKOUT  → 2 pasos, crear pedido, confirmación
+   9 DEEP-LINK → ?completar=1 abre directo el checkout
+   CAMBIOS v2.3: storeUrl() usa la URL real desplegada; los botones
+   de WhatsApp abren DIRECTO el chat del vendedor (wa.me) y la
+   tarjeta dibujada se copia al portapapeles / se descarga.
    ═══════════════════════════════════════════════════════════ */
 
 /* 1 · ICONOS */
@@ -34,6 +28,7 @@ var ICON={
  chart:'<path d="M3 3v18h18"/><path d="M7 16v-5"/><path d="M12 16V8"/><path d="M17 16v-3"/>',
  wallet:'<path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4Z"/>',
  users:'<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>',
+ user:'<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>',
  mega:'<path d="m3 11 18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/>',
  gear:'<circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.2 4.2l2.8 2.8M17 17l2.8 2.8M1 12h4M19 12h4M4.2 19.8 7 17M17 7l2.8-2.8"/>',
  sun:'<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>',
@@ -133,7 +128,8 @@ var cart=(function(){var r=LSget('cy2-cart');if(r){try{var c=JSON.parse(r);if(c&
 function persistCart(){LSset('cy2-cart',JSON.stringify(cart));}
 var state={view:'auth',cat:'Todo',subcat:'Todo',q:'',sheet:null,sel:{},qty:1,tab:'pedidos',co:null,finPeriod:30,pf:{status:'todos',q:''}};
 function storePhone(){return (DB&&DB.phone)||'18095550143';}
-function storeUrl(){return 'https://'+((DB&&DB.handle)||'alma.bazar')+'.catya.do';}
+/* v2.3: URL REAL donde está desplegada la app (Vercel / local) */
+function storeUrl(){return window.location.origin+window.location.pathname;}
 
 /* 4 · HELPERS */
 function $(s){return document.querySelector(s);}
@@ -164,17 +160,45 @@ function fileToDataURL(file,max,square,cb){var fr=new FileReader();
 function dataURLtoFile(dataurl,filename){var arr=dataurl.split(','),mime=(arr[0].match(/:(.*?);/)||[,'image/jpeg'])[1],bstr=atob(arr[1]),n=bstr.length,u8=new Uint8Array(n);
  while(n--){u8[n]=bstr.charCodeAt(n);}return new File([u8],filename,{type:mime});}
 function downloadData(d,name){if(!d)return;var a=document.createElement('a');a.href=d;a.download=name||'imagen.jpg';document.body.appendChild(a);a.click();a.remove();}
-function shareFiles(text,images){var files=[];(images||[]).forEach(function(d,i){if(d){try{files.push(dataURLtoFile(d,'img-'+(i+1)+'.jpg'));}catch(e){}}});
- try{
-  if(files.length&&navigator.canShare&&navigator.canShare({files:files})){navigator.share({files:files,text:text,title:'CatálogoYa'}).catch(function(){});return true;}
-  if(!files.length&&navigator.share){navigator.share({text:text,title:'CatálogoYa'}).catch(function(){});return true;}
- }catch(e){}
- return false;}
 function shareStore(){var u=storeUrl()+'?t='+DB.handle;
  if(navigator.share){navigator.share({title:DB.name,url:u}).catch(function(){});}else copyText(u);}
 function openWaText(text,phone){window.open('https://wa.me/'+(phone||storePhone())+'?text='+encodeURIComponent(text),'_blank');}
 function copyText(t){function fb(){var ta=document.createElement('textarea');ta.value=t;document.body.appendChild(ta);ta.select();try{document.execCommand('copy');}catch(e){}document.body.removeChild(ta);toast('Copiado ✔','good');}
  if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(t).then(function(){toast('Copiado ✔','good');},fb);}else fb();}
+/* v2.3: copia la tarjeta dibujada al portapapeles (PNG) */
+function copyImageToClipboard(dataUrl){
+ return new Promise(function(res){
+  try{
+   if(!navigator.clipboard||!window.ClipboardItem){res(false);return;}
+   var img=new Image();
+   img.onload=function(){
+     var c=document.createElement('canvas');c.width=img.width;c.height=img.height;
+     c.getContext('2d').drawImage(img,0,0);
+     c.toBlob(function(blob){
+       if(!blob){res(false);return;}
+       navigator.clipboard.write([new ClipboardItem({'image/png':blob})]).then(function(){res(true);},function(){res(false);});
+     },'image/png');
+   };
+   img.onerror=function(){res(false);};
+   img.src=dataUrl;
+  }catch(e){res(false);}
+ });}
+/* v2.3: abre DIRECTO el WhatsApp del vendedor + entrega la tarjeta */
+async function sendCardToWhatsApp(imageData,text,phone){
+  var copied=await copyImageToClipboard(imageData);
+  openWaText(text,phone);
+  if(copied){toast('📋 Tarjeta copiada: en el chat mantén pulsado y pega para enviarla como imagen','good');}
+  else{downloadData(imageData,'tarjeta-catya.jpg');toast('Imagen descargada: adjúntala en el chat con 📎','warn');}
+}
+function svgIconImg(name,color,px){
+ return new Promise(function(res){
+  var svg='<svg xmlns="http://www.w3.org/2000/svg" width="'+px+'" height="'+px+'" viewBox="0 0 24 24" fill="none" stroke="'+color+'" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'+ICON[name]+'</svg>';
+  var url=URL.createObjectURL(new Blob([svg],{type:'image/svg+xml'}));
+  var im=new Image();
+  im.onload=function(){URL.revokeObjectURL(url);res(im);};
+  im.onerror=function(){URL.revokeObjectURL(url);res(im);};
+  im.src=url;
+ });}
 function toast(msg,tone,actLabel,cb){var t=document.createElement('div');t.className='toast '+(tone||'');t.textContent=msg;
  if(actLabel){var b=document.createElement('button');b.textContent=actLabel;b.onclick=function(){t.remove();if(cb)cb();};t.appendChild(b);}
  $('#toasts').appendChild(t);setTimeout(function(){t.style.opacity='0';t.style.transition='opacity .3s';setTimeout(function(){t.remove();},300);},3400);}
@@ -206,7 +230,7 @@ function doRegister(){var n=$('#rgName').value.trim(),h=slug($('#rgHandle').valu
  toast('🎉 Tienda "'+n+'" creada. Agrega tu primer producto.','good');setTimeout(function(){openAdmin();state.tab='inventario';renderAdmin();openProd();},600);}
 function enterApp(){applyTheme(curTheme());renderCartBadge();show('tienda');}
 
-/* 6 · CARRITO */
+/* 6 · CARRITO + TARJETAS CANVAS */
 function vkey(v){var ks=Object.keys(v).sort(),out=[];ks.forEach(function(k){out.push(k+'='+v[k]);});return out.join('|');}
 function addToCart(pid,variant,qty){var p=findP(pid);if(!p||p.stock<=0)return;var key=vkey(variant),found=null;
  cart.forEach(function(l){if(l.pid===pid&&l.vkey===key)found=l;});
@@ -219,7 +243,7 @@ function renderCartBadge(){var n=0;cart.forEach(function(l){n+=l.qty;});var t='R
 function openCart(){$('#cartBk').className='bk show';$('#cartDr').className='drawer show';renderCart();}
 function closeCart(){$('#cartBk').className='bk';$('#cartDr').className='drawer';}
 
-/* ── TARJETA CANVAS v2: solo productos (total y link van en el texto anexo) ── */
+/* ── utilidades de dibujo ── */
 function wrapText(ctx,text,maxW){var words=text.split(' '),lines=[],cur='';
  for(var i=0;i<words.length;i++){var t=cur?cur+' '+words[i]:words[i];
   if(ctx.measureText(t).width>maxW&&cur){lines.push(cur);cur=words[i];}else cur=t;}
@@ -234,6 +258,9 @@ function cardVisual(line){
   if(line.p.image){var im=new Image();im.onload=function(){out.img=im;res(out);};im.onerror=function(){res(out);};im.src=line.p.image;return;}
   res(out);
  });}
+function prodVisual(p){return cardVisual({p:p});}
+
+/* ── TARJETA CONSULTA: solo productos (total y link van en el texto) ── */
 function drawAvailabilityCard(lines){
  return new Promise(function(resolve){
   Promise.all(lines.map(cardVisual)).then(function(vis){
@@ -288,10 +315,85 @@ async function confirmAvailability(){
   toast('Generando tarjeta de consulta…','good');
   if(document.fonts&&document.fonts.ready){try{await document.fonts.ready;}catch(e){}}
   var data=await drawAvailabilityCard(c.lines);
-  var caption=availabilityCaption(c);
-  if(shareFiles(caption,[data])){toast('Tarjeta enviada como una sola imagen ✔','good');}
-  else{downloadData(data,'consulta-disponibilidad.jpg');openWaText(caption);
-   toast('Tu navegador no comparte imágenes: se descargó la tarjeta y se abrió el chat para que la adjuntes','warn');}
+  sendCardToWhatsApp(data, availabilityCaption(c), storePhone());
+}
+
+/* ── TARJETA PEDIDO: hasta la foto del último producto; el resto va en texto ── */
+function drawOrderCard(o){
+ return new Promise(function(resolve){
+  var visP=Promise.all(o.items.map(function(it){var p=findP(it.pid);return prodVisual(p||{hue:200,image:''});}));
+  Promise.all([svgIconImg('bag','#ffffff',64), svgIconImg('user','#ffffff',44), visP]).then(function(res3){
+   var bagImg=res3[0], userImg=res3[1], vis=res3[2];
+   var W=1080,pad=64,F='Inter, Arial, sans-serif';
+   var c=document.createElement('canvas'),ctx=c.getContext('2d');
+   ctx.font='700 46px '+F;
+   var titleL=wrapText(ctx,'Pedido #'+o.number+' — '+DB.name,W-pad*2-90);
+   var addr=(o.shipping_method==='pickup'? o.pickup_point : o.address)+', '+(o.province||'');
+   var rowH=230, rowGap=24;
+   var y=pad;
+   var headerH=Math.max(64,titleL.length*58);
+   var by=y+headerH+32, boxH=150;
+   var listLabelY=by+boxH+44;
+   var rowsY=listLabelY+60;
+   var rowsH=o.items.length*rowH+(o.items.length-1)*rowGap;
+   var H=rowsY+rowsH+pad;
+   c.width=W;c.height=H;
+   ctx.fillStyle='#0e453a'; roundRectPath(ctx,0,0,W,H,44); ctx.fill();
+   ctx.textBaseline='top';
+   ctx.drawImage(bagImg,pad,y+2,60,60);
+   ctx.fillStyle='#ffffff'; ctx.font='700 46px '+F;
+   titleL.forEach(function(l,i){ctx.fillText(l,pad+84,y+i*58);});
+   ctx.fillStyle='rgba(255,255,255,.09)'; roundRectPath(ctx,pad,by,W-pad*2,boxH,24); ctx.fill();
+   ctx.drawImage(userImg,pad+28,by+30,44,44);
+   ctx.fillStyle='#ffffff'; ctx.font='600 40px '+F;
+   var nameW=ctx.measureText(o.customer_name).width;
+   ctx.fillText(o.customer_name,pad+92,by+30);
+   ctx.fillStyle='#7cc0f4'; ctx.font='400 38px '+F;
+   ctx.fillText('· '+o.customer_phone.replace('+1',''),pad+92+nameW+16,by+32);
+   ctx.fillStyle='rgba(255,255,255,.85)'; ctx.font='400 36px '+F;
+   ctx.fillText(addr,pad+92,by+88);
+   ctx.fillStyle='#ffffff'; ctx.font='400 40px '+F;
+   ctx.fillText('Artículos ordenados ('+o.items.reduce(function(a,i){return a+i.qty;},0)+'):',pad,listLabelY);
+   o.items.forEach(function(it,i){
+     var yy=rowsY+i*(rowH+rowGap);
+     var v=vis[i];
+     ctx.save(); roundRectPath(ctx,pad,yy,W-pad*2,rowH,24); ctx.clip();
+     ctx.fillStyle='#f7f8f8'; ctx.fillRect(pad,yy,W-pad*2,rowH);
+     ctx.fillStyle=v.bg; ctx.fillRect(pad,yy,rowH,rowH);
+     if(v.img) drawContain(ctx,v.img,pad,yy,rowH,rowH);
+     var ix=pad+rowH+28;
+     ctx.fillStyle='#1c1c1e'; ctx.font='600 40px '+F;
+     ctx.fillText(it.qty+'x '+it.name, ix, yy+34);
+     var variant=Object.keys(it.variant).map(function(k){return it.variant[k];}).join(' · ');
+     ctx.fillStyle='#6b6b70'; ctx.font='400 34px '+F;
+     if(variant) ctx.fillText(variant, ix, yy+92);
+     ctx.fillStyle='#1c1c1e'; ctx.font='400 38px '+F;
+     ctx.fillText(fmt(it.unit_price), ix, yy+146);
+     ctx.restore();
+   });
+   resolve(c.toDataURL('image/jpeg',0.92));
+  });
+ });}
+/* v2.3: el texto del pedido = de subtotal hacia abajo */
+function waOrderMessage(o){
+  var L=[];
+  L.push('Subtotal: '+fmt(o.subtotal));
+  if(o.discount)L.push('Promo: −'+fmt(o.discount));
+  L.push('Envío ('+shipLabel(o.shipping_method).label.split(' (')[0]+'): '+(o.shipping_cost?fmt(o.shipping_cost):'GRATIS'));
+  L.push('TOTAL A PAGAR: '+fmt(o.total));
+  L.push('');
+  L.push('🚚 Entrega: '+shipLabel(o.shipping_method).label);
+  L.push('📍 '+(o.shipping_method==='pickup'?o.pickup_point:o.address));
+  var pm=payLabel(o.payment_method);
+  L.push('💳 Pago: '+pm.bank+(pm.type==='transfer'?' · '+pm.acct+' · Titular: '+pm.holder:''));
+  L.push('⏳ Estado: Pendiente');
+  return L.join('\n');}
+async function sendOrderWA(id){
+  var o=findO(id);if(!o)return;
+  if(document.fonts&&document.fonts.ready){try{await document.fonts.ready;}catch(e){}}
+  var data=await drawOrderCard(o);
+  sendCardToWhatsApp(data, waOrderMessage(o), storePhone());
+  markWaSent(id);
 }
 
 function renderCart(){var c=cartCalc();
@@ -365,7 +467,7 @@ function openSheet(pid){var p=findP(pid);if(!p)return;state.sheet=p;state.sel={}
  $('#sheetBk').className='bk show';$('#sheetDr').className='drawer show';renderSheet();}
 function closeSheet(){$('#sheetBk').className='bk';$('#sheetDr').className='drawer';state.sheet=null;}
 function renderSheet(){var p=state.sheet;if(!p)return;var sold=p.stock<=0;
- var wa='https://wa.me/'+storePhone()+'?text='+encodeURIComponent('Hola 👋 Vi *'+p.name+'*'+(p.code?' ('+p.code+')':'')+' a '+fmt(p.price)+' en tu catálogo. ¿Está disponible? '+storeUrl()+'/p/'+p.id);
+ var wa='https://wa.me/'+storePhone()+'?text='+encodeURIComponent('Hola 👋 Vi *'+p.name+'*'+(p.code?' ('+p.code+')':'')+' a '+fmt(p.price)+' en tu catálogo. ¿Está disponible? '+storeUrl()+'?t='+DB.handle);
  $('#sheetBd').innerHTML='<div style="display:flex;align-items:center;margin-bottom:12px"><b style="font-size:18px;font-weight:700;flex:1">'+esc(p.name)+'</b><button class="icon-btn" onclick="closeSheet()">'+ic('x',18)+'</button></div>'+
   '<div style="border-radius:16px;overflow:hidden">'+tileOpen(p,sold?'sold':'')+(sold?'<span class="tb out">Agotado</span>':'')+'</div></div>'+
   '<p style="font-size:13px;color:var(--text2);margin:12px 0 6px">'+esc(p.cat)+(p.subcat?' · '+esc(p.subcat):'')+(p.code?' · Cód. '+esc(p.code):'')+'</p>'+
@@ -453,40 +555,18 @@ function confirmOrder(){var co=state.co;if(!co.payId)return toast('Selecciona m�
  LSset('cy2-last',JSON.stringify(o.items.map(function(it){return {pid:it.pid,variant:it.variant,qty:it.qty};})));
  var sb=$('#sumbar');if(sb)sb.remove();
  show('confirm');renderConfirm(o);}
-function waOrderMessage(o){var n=o.items.reduce(function(a,i){return a+i.qty;},0);var L=[];
- L.push('🛍 *Pedido #'+o.number+' — '+DB.name+'*');
- L.push('👤 '+o.customer_name+' · '+o.customer_phone.replace('+1',''));
- if(o.province)L.push('📍 '+o.province);
- L.push('');
- L.push('*Artículos ordenados ('+n+'):*');
- o.items.forEach(function(it){var v=Object.keys(it.variant).map(function(k){return it.variant[k];}).join(' · ');
-  L.push(it.qty+'x '+it.name+(v?' · '+v:'')+' · '+fmt(it.line_total));});
- L.push('');
- L.push('Subtotal: '+fmt(o.subtotal));
- if(o.discount)L.push('Promo: −'+fmt(o.discount));
- L.push('Envío ('+shipLabel(o.shipping_method).label.split(' (')[0]+'): '+(o.shipping_cost?fmt(o.shipping_cost):'GRATIS'));
- L.push('*Total: '+fmt(o.total)+'*');
- L.push('💳 Pago: '+payLabel(o.payment_method).bank);
- L.push('');
- L.push('_Pedido hecho desde el catálogo. ¿Confirman disponibilidad?_');
- return L.join('\n');}
-function sendOrderWA(id){var o=findO(id);if(!o)return;
- var msg=waOrderMessage(o);
- var imgs=o.items.map(function(it){var p=findP(it.pid);return p?p.image:'';});
- if(!shareFiles(msg,imgs))openWaText(msg);
- markWaSent(id);}
 function renderConfirm(o){var pm=payLabel(o.payment_method),msg=waOrderMessage(o);
  var banks=DB.settings.payments.filter(function(p){return p.type==='transfer'&&p.enabled;});
  $('#confBody').innerHTML='<div class="conf-card" style="text-align:center"><span class="pill ok">Pedido creado</span>'+
   '<h1 style="font-size:38px;font-weight:900;margin:12px 0 6px;letter-spacing:-.02em">#'+o.number+'</h1>'+
   '<p style="color:var(--text2);font-size:15px">Total '+fmt(o.total)+' · '+esc(pm.bank)+'</p>'+
-  '<div style="margin:16px 0"><button class="btn btn-wa" style="width:100%" onclick="sendOrderWA(\''+o.id+'\')">'+icWa(18)+'Enviar pedido por WhatsApp (con fotos)</button></div>'+
-  '<p style="font-size:13px;color:var(--text2)">Se abrirá WhatsApp con el pedido y las fotos de los artículos.</p></div>'+
+  '<div style="margin:16px 0"><button class="btn btn-wa" style="width:100%" onclick="sendOrderWA(\''+o.id+'\')">'+icWa(18)+'Enviar pedido por WhatsApp</button></div>'+
+  '<p style="font-size:13px;color:var(--text2)">Se abre directo el WhatsApp del vendedor con el texto; la tarjeta con los artículos queda copiada para pegar en el chat.</p></div>'+
   (pm.type==='transfer'?'<div class="conf-card"><b style="font-size:17px;font-weight:700">Datos para tu transferencia</b><div style="margin-top:12px">'+
    banks.map(function(b){return '<div class="bankline"><b>'+esc(b.bank)+'</b> '+esc(b.acct)+' · '+esc(b.holder)+'<button onclick="copyText(\''+esc(b.bank+' '+b.acct+' '+b.holder)+'\')">COPIAR</button></div>';}).join('')+
    '<div style="margin-top:12px"><label class="field" style="margin:0"><span style="font-size:12px;font-weight:700;color:var(--text2)">📎 Ya transferí — subir comprobante</span><input type="file" style="margin-top:8px" onchange="uploadProof(\''+o.id+'\')"></label></div></div>':'')+
-  '<div class="conf-card"><b style="font-size:17px;font-weight:700">Resumen</b><div class="msgbox" style="margin-top:12px">'+esc(msg)+'</div>'+
-  '<div style="margin-top:14px;display:flex;gap:10px;flex-wrap:wrap"><button class="btn btn-outline" onclick="copyText(decodeURIComponent(\''+encodeURIComponent(msg)+'\'))">'+ic('copy',16)+'Copiar pedido</button>'+
+  '<div class="conf-card"><b style="font-size:17px;font-weight:700">Texto que se enviará (de subtotal hacia abajo)</b><div class="msgbox" style="margin-top:12px">'+esc(msg)+'</div>'+
+  '<div style="margin-top:14px;display:flex;gap:10px;flex-wrap:wrap"><button class="btn btn-outline" onclick="copyText(decodeURIComponent(\''+encodeURIComponent(msg)+'\'))">'+ic('copy',16)+'Copiar texto</button>'+
   '<a class="btn btn-outline" href="https://wa.me/'+storePhone()+'?text='+encodeURIComponent('Hola, consulta sobre mi pedido #'+o.number)+'" target="_blank" rel="noopener noreferrer">'+icWa(16)+'Soporte</a>'+
   '<button class="btn btn-primary" onclick="goTienda()">Seguir comprando</button></div></div>';}
 function markWaSent(id){var o=findO(id);if(o&&!o.wa_sent_at){o.wa_sent_at=new Date().toISOString();persist();toast('Pedido transmitido al vendedor ✔','good');}}
