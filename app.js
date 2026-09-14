@@ -1,4 +1,4 @@
-/* CatálogoYa v2.5 · app.js — núcleo público */
+/* CatálogoYa v2.6 · app.js — núcleo público */
 /* 1 ICONOS */
 var ICON={
  cart:'<circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/>',
@@ -56,9 +56,25 @@ function LSset(k,v){try{window.localStorage.setItem(k,v);}catch(e){}}
 function LSdel(k){try{window.localStorage.removeItem(k);}catch(e){}}
 function hpass(s){var h=5381;for(var i=0;i<s.length;i++){h=((h*33)^s.charCodeAt(i))>>>0;}return h.toString(16);}
 function DEFSettings(){return {free_threshold:5000,low_stock:3,promo:{min:3000,percent:10},cod_zones:['ZONA_SD'],insta:'',
- shipping:[{id:'local',label:'Local Delivery (SD / Santiago)',price:300,zones:['ZONA_SD','ZONA_CIBAO'],eta:'Mismo día / 24 h'},
-  {id:'nacional',label:'Envío Nacional (Caribe Pack / Metropac / Aptpra)',price:350,zones:['ZONA_SD','ZONA_CIBAO','ZONA_ESTE','ZONA_SUR'],eta:'24–72 h'},
-  {id:'pickup',label:'Recogida en tienda',price:0,zones:['ZONA_SD','ZONA_CIBAO'],eta:'Horario de tienda'}],
+ shipping:[
+  {id:'uber',label:'Envío por Uber',price:250,zones:['ZONA_SD','ZONA_CIBAO'],eta:'Mismo día / 24 h',active:true},
+  {id:'pickup',label:'Recogida en tienda',price:0,zones:['ZONA_SD','ZONA_CIBAO'],eta:'Horario de tienda',active:true},
+  {id:'agencia',label:'Agencias de envío (Caribe Pack / Metropac / Aptpra)',price:350,zones:['ZONA_SD','ZONA_CIBAO','ZONA_ESTE','ZONA_SUR'],eta:'24–72 h',active:true},
+  {id:'metro',label:'Contra entrega en estación de metro',price:150,zones:['ZONA_SD'],eta:'Mismo día',active:true,specify:'station'},
+  {id:'plaza',label:'Entrega en plaza comercial',price:200,zones:['ZONA_SD','ZONA_CIBAO'],eta:'24–48 h',active:true,specify:'plaza'}],
+ provinces:[
+  {n:'Distrito Nacional',z:'ZONA_SD',active:true},
+  {n:'Santo Domingo Este',z:'ZONA_SD',active:true},
+  {n:'Santo Domingo Oeste',z:'ZONA_SD',active:true},
+  {n:'Santo Domingo Norte',z:'ZONA_SD',active:true},
+  {n:'Santiago',z:'ZONA_CIBAO',active:true},
+  {n:'La Vega',z:'ZONA_CIBAO',active:true},
+  {n:'Puerto Plata',z:'ZONA_CIBAO',active:true},
+  {n:'Punta Cana',z:'ZONA_ESTE',active:true},
+  {n:'La Romana',z:'ZONA_ESTE',active:true},
+  {n:'San Pedro de Macorís',z:'ZONA_ESTE',active:true},
+  {n:'San Cristóbal',z:'ZONA_SUR',active:true},
+  {n:'Barahona',z:'ZONA_SUR',active:true}],
  pickup_points:[{city:'Distrito Nacional',label:'Tienda Aurora — Av. España #1212, Gazcue',hours:'Lun–Sáb 9am–6pm'},{city:'Santiago',label:'Punto Aurora — Calle Del Sol #45',hours:'Lun–Vie 10am–5pm'}],
  payments:[{id:'transfer_bpd',type:'transfer',bank:'Banco Popular Dominicano',acct:'Ahorros 796-21458-7',holder:'Aurora Boutique SRL',enabled:true},
   {id:'transfer_banreservas',type:'transfer',bank:'Banreservas',acct:'Corriente 001-55875-9',holder:'Aurora Boutique SRL',enabled:true},
@@ -93,10 +109,10 @@ function DEMO_STORE(){
    {id:'c2',name:'Fernanda Ruiz',wa:'18493314567',status:'entregado',notes:'Mayorista: bolsos y pañuelos.',credit:true},
    {id:'c3',name:'Lucas Vega',wa:'18098123456',status:'entregado',notes:'Pedido RD-0002 pendiente de saldo.',credit:false}],
   orders:[
-   {id:'o1',number:'RD-0001',created_at:dAgo(2),customer_name:'Camila Rojas',customer_phone:'+18095540122',province:'Distrito Nacional',shipping_method:'local',shipping_cost:300,address:'Calle El Sol #12, Gazcue',pickup_point:'',payment_method:'transfer_bpd',payment_status:'pagado',status:'entregado',subtotal:3100,discount:0,total:3400,due_date:dAgo(2),wa_sent_at:dAgo(2),items:[{pid:'AU-001',code:'AU-001',name:'Vestido Midi Plisado',variant:{Talla:'M',Color:'Verde Salvia'},qty:1,unit_price:2450,cost:1300,line_total:2450},{pid:'AU-006',code:'AU-006',name:'Aros Perla Natural',variant:{Color:'Perla'},qty:1,unit_price:650,cost:250,line_total:650}]},
-   {id:'o2',number:'RD-0002',created_at:dAgo(6),customer_name:'Lucas Vega',customer_phone:'+18098123456',province:'Santiago',shipping_method:'nacional',shipping_cost:350,address:'Punto Caribe Pack Santiago',pickup_point:'',payment_method:'credito',payment_status:'pendiente',status:'enviado',subtotal:3450,discount:0,total:3800,due_date:dAgo(-24),wa_sent_at:dAgo(6),items:[{pid:'AU-011',code:'AU-011',name:'Botín Cuero Miel',variant:{Talla:'40',Color:'Miel'},qty:1,unit_price:3450,cost:1800,line_total:3450}]},
+   {id:'o1',number:'RD-0001',created_at:dAgo(2),customer_name:'Camila Rojas',customer_phone:'+18095540122',province:'Distrito Nacional',shipping_method:'uber',shipping_cost:250,address:'Calle El Sol #12, Gazcue',pickup_point:'',payment_method:'transfer_bpd',payment_status:'pagado',status:'entregado',subtotal:3100,discount:0,total:3350,due_date:dAgo(2),wa_sent_at:dAgo(2),items:[{pid:'AU-001',code:'AU-001',name:'Vestido Midi Plisado',variant:{Talla:'M',Color:'Verde Salvia'},qty:1,unit_price:2450,cost:1300,line_total:2450},{pid:'AU-006',code:'AU-006',name:'Aros Perla Natural',variant:{Color:'Perla'},qty:1,unit_price:650,cost:250,line_total:650}]},
+   {id:'o2',number:'RD-0002',created_at:dAgo(6),customer_name:'Lucas Vega',customer_phone:'+18098123456',province:'Santiago',shipping_method:'agencia',shipping_cost:350,address:'Punto Caribe Pack Santiago',pickup_point:'',payment_method:'credito',payment_status:'pendiente',status:'enviado',subtotal:3450,discount:0,total:3800,due_date:dAgo(-24),wa_sent_at:dAgo(6),items:[{pid:'AU-011',code:'AU-011',name:'Botín Cuero Miel',variant:{Talla:'40',Color:'Miel'},qty:1,unit_price:3450,cost:1800,line_total:3450}]},
    {id:'o3',number:'RD-0003',created_at:dAgo(1),customer_name:'Fernanda Ruiz',customer_phone:'+18493314567',province:'Distrito Nacional',shipping_method:'pickup',shipping_cost:0,address:'',pickup_point:'Tienda Aurora — Av. España #1212, Gazcue',payment_method:'transfer_banreservas',payment_status:'pendiente',status:'pendiente',subtotal:4500,discount:0,total:4500,due_date:dAgo(1),wa_sent_at:dAgo(1),items:[{pid:'AU-008',code:'AU-008',name:'Bolso Tote Cuero',variant:{Color:'Marrón'},qty:2,unit_price:2250,cost:1100,line_total:4500}]}],
-  payments:[{id:'pay1',order_id:'o1',amount:3400,method:'transfer_bpd',reference:'REF-1001',received_at:dAgo(1)}],
+  payments:[{id:'pay1',order_id:'o1',amount:3350,method:'transfer_bpd',reference:'REF-1001',received_at:dAgo(1)}],
   receipts:[{id:'r1',number:'R-0001',order_id:'o1',issued_at:dAgo(1)},{id:'r2',number:'R-0002',order_id:'o2',issued_at:dAgo(5)}],
   reviews:[{pid:'AU-001',rating:5},{pid:'AU-008',rating:5},{pid:'AU-011',rating:4}],
   posts:[], abandoned:[] };
@@ -111,7 +127,7 @@ function logout(){LSdel('cy2-session');DB=null;cart=[];persistCart();renderCartB
 function persist(){if(DB){STORES[DB.id]=DB;persistStores();}}
 var cart=(function(){var r=LSget('cy2-cart');if(r){try{var c=JSON.parse(r);if(c&&c.length!==undefined)return c;}catch(e){}}return [];})();
 function persistCart(){LSset('cy2-cart',JSON.stringify(cart));}
-var state={view:'auth',cat:'Todo',subcat:'Todo',q:'',sheet:null,sel:{},qty:1,tab:'pedidos',co:null,finPeriod:30,pf:{status:'todos',q:''}};
+var state={view:'auth',cat:'Todo',subcat:'Todo',q:'',sheet:null,sel:{},qty:1,tab:'pedidos',co:null,finPeriod:30,pf:{status:'todos',q:''},shipOpen:false};
 function storePhone(){return (DB&&DB.phone)||'18095550143';}
 function storeUrl(){return window.location.origin+window.location.pathname;}
 function catalogLink(){return storeUrl()+'?t='+DB.handle;}
@@ -123,7 +139,12 @@ function uid(){return Math.random().toString(36).slice(2,9);}
 function slug(s){return s.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'');}
 function findP(id){if(!DB)return null;for(var i=0;i<DB.products.length;i++)if(DB.products[i].id===id)return DB.products[i];return null;}
 function findO(id){for(var i=0;i<DB.orders.length;i++)if(DB.orders[i].id===id)return DB.orders[i];return null;}
-function zoneOf(pv){var P=[['Distrito Nacional','ZONA_SD'],['Santo Domingo Este','ZONA_SD'],['Santo Domingo Oeste','ZONA_SD'],['Santo Domingo Norte','ZONA_SD'],['Santiago','ZONA_CIBAO'],['La Vega','ZONA_CIBAO'],['Puerto Plata','ZONA_CIBAO'],['Punta Cana','ZONA_ESTE'],['La Romana','ZONA_ESTE'],['San Pedro de Macorís','ZONA_ESTE'],['San Cristóbal','ZONA_SUR'],['Barahona','ZONA_SUR']];for(var i=0;i<P.length;i++)if(P[i][0]===pv)return P[i][1];return '';}
+function zoneOf(pv){
+ if(DB&&DB.settings&&DB.settings.provinces){for(var i=0;i<DB.settings.provinces.length;i++){if(DB.settings.provinces[i].n===pv)return DB.settings.provinces[i].z;}}
+ var P=[['Distrito Nacional','ZONA_SD'],['Santo Domingo Este','ZONA_SD'],['Santo Domingo Oeste','ZONA_SD'],['Santo Domingo Norte','ZONA_SD'],['Santiago','ZONA_CIBAO'],['La Vega','ZONA_CIBAO'],['Puerto Plata','ZONA_CIBAO'],['Punta Cana','ZONA_ESTE'],['La Romana','ZONA_ESTE'],['San Pedro de Macorís','ZONA_ESTE'],['San Cristóbal','ZONA_SUR'],['Barahona','ZONA_SUR']];
+ for(var j=0;j<P.length;j++)if(P[j][0]===pv)return P[j][1];
+ return 'ZONA_SD';}
+function provinceOptions(){return ((DB&&DB.settings&&DB.settings.provinces)||[]).filter(function(p){return p.active;});}
 function fDate(iso){return new Date(iso).toLocaleDateString('es-DO',{day:'2-digit',month:'short'});}
 function fDT(iso){var d=new Date(iso);return d.toLocaleDateString('es-DO',{day:'2-digit',month:'2-digit',year:'numeric'})+' · '+d.toLocaleTimeString('es-DO',{hour:'numeric',minute:'2-digit'});}
 function stars(r){var f=Math.round(r);return '★★★★★'.slice(0,f)+'☆☆☆☆☆'.slice(0,5-f);}
@@ -160,15 +181,14 @@ function copyImageToClipboard(dataUrl){
   }catch(e){res(false);}
  });}
 async function sendCardToWhatsApp(imageData,text,phone){
-  var file=null;try{file=dataURLtoFile(imageData,'tarjeta-catya.jpg');}catch(e){}
-  if(file&&navigator.canShare&&navigator.canShare({files:[file]})){
-    navigator.share({files:[file],text:text,title:'CatálogoYa'}).catch(function(err){if(err&&err.name==='AbortError'){openWaText(text,phone);}});
-    toast('Elige WhatsApp y el chat de la tienda: la imagen viaja con el texto','good');return;}
-  var copied=await copyImageToClipboard(imageData);
-  openWaText(text,phone);
-  if(copied){toast('📋 Tarjeta copiada: en el chat mantén pulsado y pega','good');}
-  else{downloadData(imageData,'tarjeta-catya.jpg');toast('Imagen descargada: adjúntala con 📎 en el chat','warn');}
-}
+ var file=null;try{file=dataURLtoFile(imageData,'tarjeta-catya.jpg');}catch(e){}
+ if(file&&navigator.canShare&&navigator.canShare({files:[file]})){
+  navigator.share({files:[file],text:text,title:'CatálogoYa'}).catch(function(err){if(err&&err.name==='AbortError'){openWaText(text,phone);}});
+  toast('Elige WhatsApp y el chat de la tienda: la imagen viaja con el texto','good');return;}
+ var copied=await copyImageToClipboard(imageData);
+ openWaText(text,phone);
+ if(copied){toast('📋 Tarjeta copiada: en el chat mantén pulsado y pega','good');}
+ else{downloadData(imageData,'tarjeta-catya.jpg');toast('Imagen descargada: adjúntala con 📎 en el chat','warn');}}
 function svgIconImg(name,color,px){
  return new Promise(function(res){
   var svg='<svg xmlns="http://www.w3.org/2000/svg" width="'+px+'" height="'+px+'" viewBox="0 0 24 24" fill="none" stroke="'+color+'" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'+ICON[name]+'</svg>';
@@ -203,7 +223,7 @@ function doRegister(){var n=$('#rgName').value.trim(),h=slug($('#rgHandle').valu
  STORES[s.id]=s;persistStores();setSession(s.id);enterApp();
  toast('🎉 Tienda "'+n+'" creada. Agrega tu primer producto.','good');setTimeout(function(){openAdmin();state.tab='inventario';renderAdmin();openProd();},600);}
 function enterApp(){applyTheme(curTheme());renderCartBadge();show('tienda');}
-/* 6 CARRITO + fly-to-cart */
+/* 6 CARRITO + fly */
 function vkey(v){var ks=Object.keys(v).sort(),out=[];ks.forEach(function(k){out.push(k+'='+v[k]);});return out.join('|');}
 function addToCart(pid,variant,qty,srcEl){
  var p=findP(pid);if(!p||p.stock<=0)return;
@@ -227,8 +247,7 @@ function flyToCart(p,srcEl){
  var dx=(tr.left+tr.width/2)-(start.left+w/2), dy=(tr.top+tr.height/2)-(start.top+h/2);
  function land(){img.remove();landCart();}
  if(img.animate){var a=img.animate([{transform:'translate(0,0) scale(1)',opacity:1},{transform:'translate('+dx+'px,'+dy+'px) scale(.15)',opacity:.2}],{duration:650,easing:'cubic-bezier(.2,.7,.3,1)'});a.onfinish=land;}
- else{img.style.transition='transform .6s cubic-bezier(.2,.7,.3,1),opacity .6s';requestAnimationFrame(function(){img.style.transform='translate('+dx+'px,'+dy+'px) scale(.15)';img.style.opacity='.2';});setTimeout(land,650);}
-}
+ else{img.style.transition='transform .6s cubic-bezier(.2,.7,.3,1),opacity .6s';requestAnimationFrame(function(){img.style.transform='translate('+dx+'px,'+dy+'px) scale(.15)';img.style.opacity='.2';});setTimeout(land,650);}}
 function landCart(){
  renderCartBadge();
  var t=document.getElementById('fabCart');
@@ -357,7 +376,7 @@ function waOrderMessage(o){
  L.push('Envío ('+shipLabel(o.shipping_method).label.split(' (')[0]+'): '+(o.shipping_cost?fmt(o.shipping_cost):'GRATIS'));
  L.push('TOTAL A PAGAR: '+fmt(o.total));
  L.push('');
- L.push('🚚 Entrega: '+shipLabel(o.shipping_method).label);
+ L.push('🚚 Entrega: '+shipLabel(o.shipping_method).label+(o.specify?(' ('+o.specify+')'):''));
  L.push('📍 '+(o.shipping_method==='pickup'?o.pickup_point:o.address));
  var pm=payLabel(o.payment_method);
  L.push('💳 Pago: '+pm.bank+(pm.type==='transfer'?' · '+pm.acct+' · Titular: '+pm.holder:''));
@@ -395,7 +414,7 @@ function renderStoreHead(){
  var tag=(bioLines[0]||'Moda y piezas únicas')+' · @'+DB.handle+' · Santo Domingo, RD';
  var rest=bioLines.slice(1).join('\n');
  var owner=!DB._anon;
- var shipLines=DB.settings.shipping.map(function(m){return '<div class="dline"><b>'+esc(m.label)+'</b><span>'+(m.price?fmt(m.price):'GRATIS')+' · '+esc(m.eta)+'</span></div>';}).join('');
+ var shipLines=DB.settings.shipping.filter(function(m){return m.active;}).map(function(m){return '<div class="dline"><b>'+esc(m.label)+'</b><span>'+(m.price?fmt(m.price):'GRATIS')+' · '+esc(m.eta)+'</span></div>';}).join('');
  var payLines=DB.settings.payments.filter(function(p){return p.enabled;}).map(function(p){return '<div class="dline"><b>'+esc(p.bank)+'</b><span>'+(p.type==='transfer'?esc(p.acct):'')+'</span></div>';}).join('');
  $('#storeHead').innerHTML=
   '<div class="topright">'+
@@ -448,29 +467,45 @@ function renderSheet(){var p=state.sheet;if(!p)return;var sold=p.stock<=0;
    :'<button class="btn btn-primary" style="width:100%" onclick="addToCart(\''+p.id+'\',state.sel,state.qty,this);closeSheet()">'+ic('cart',17)+'Agregar · '+fmt(p.price*state.qty)+'</button>'+
     '<a class="btn btn-wa" style="width:100%;margin-top:10px" href="'+wa+'" target="_blank" rel="noopener noreferrer">'+icWa(17)+'Preguntar por WhatsApp</a>');}
 /* 8 CHECKOUT */
-var PROVINCES_LIST=['Distrito Nacional','Santo Domingo Este','Santo Domingo Oeste','Santo Domingo Norte','Santiago','La Vega','Puerto Plata','Punta Cana','La Romana','San Pedro de Macorís','San Cristóbal','Barahona'];
 function openCheckout(){if(!cart.length){toast('Tu carrito está vacío','warn');return;}closeCart();
- state.co={step:1,name:'',prefix:'809',phone:'',province:'',shipId:'',address:'',pickupId:'',notes:'',payId:'',bankId:''};
+ state.co={step:1,name:'',prefix:'809',phone:'',province:'',shipId:'',address:'',pickupId:'',specify:'',notes:'',payId:'',bankId:'',proofImage:''};
+ state.shipOpen=false;
  show('checkout');renderCheckout();}
 function show(v){state.view=v;['auth','tienda','checkout','confirm','admin'].forEach(function(k){$('#v-'+k).style.display=(k===v)?'block':'none';});
  $('#bottomBar').style.display=(v==='tienda')?'flex':'none';
+ var sb=$('#sumbar');if(sb&&v!=='checkout')sb.remove();
  if(v==='tienda')renderCatalog();window.scrollTo(0,0);}
 function goTienda(){show('tienda');}
-function shipOptions(){var z=zoneOf(state.co.province);return DB.settings.shipping.filter(function(m){if(!state.co.province)return true;
- if(m.id==='pickup')return DB.settings.pickup_points.some(function(pt){return pt.city===state.co.province;});return m.zones.indexOf(z)!==-1;});}
+function shipOptions(){
+ var z=zoneOf(state.co.province);
+ return (DB.settings.shipping||[]).filter(function(m){
+  if(!m.active)return false;
+  if(!state.co.province)return true;
+  if(m.id==='pickup')return DB.settings.pickup_points.some(function(pt){return pt.city===state.co.province;})&&m.zones.indexOf(z)!==-1;
+  return m.zones.indexOf(z)!==-1;});}
+function pickProof(inp){if(!inp.files||!inp.files[0])return;
+ fileToDataURL(inp.files[0],800,false,function(d){state.co.proofImage=d;renderCheckout();});}
 function renderCheckout(){var co=state.co;
  $('#steps').innerHTML='<span class="stepdot '+(co.step>1?'done':'on')+'">1</span><span class="steplab">Entrega</span><span class="stepdot '+(co.step>1?'on':'')+'">2</span><span class="steplab">Pago</span>';
- if(co.step===1){var opts=shipOptions();
+ if(co.step===1){
+  var opts=shipOptions();
+  var chosen=null;opts.forEach(function(m){if(m.id===co.shipId)chosen=m;});
+  var shipBox=state.shipOpen?('<div style="margin-top:10px">'+opts.map(function(m){
+     return '<div class="opt '+(co.shipId===m.id?'on':'')+'" onclick="state.co.shipId=\''+m.id+'\';state.shipOpen=false;renderCheckout()"><b>'+esc(m.label)+'</b><span class="pr">'+(m.price?fmt(m.price):'GRATIS')+'</span><small>'+esc(m.eta)+'</small></div>';}).join('')+'</div>')
+   :'<p style="font-size:12px;color:var(--text2);margin-top:6px">Toca para ver los métodos disponibles.</p>';
+  var specify='';
+  if(chosen&&chosen.specify){
+   specify='<div class="field"><label>'+(chosen.specify==='station'?'¿Cuál estación de metro?':'¿Cuál plaza comercial?')+' *</label><input class="inp" value="'+esc(co.specify)+'" oninput="state.co.specify=this.value" placeholder="'+(chosen.specify==='station'?'Ej: Estación Juan Pablo Duarte':'Ej: Sambil')+'"></div>';
+  }
   $('#coBody').innerHTML=
    '<div class="fgrid"><div class="field"><label>Nombre y apellido *</label><input class="inp" value="'+esc(co.name)+'" placeholder="María Pérez" oninput="state.co.name=this.value"></div>'+
    '<div class="field"><label>Teléfono *</label><div style="display:flex;gap:8px"><select class="inp" style="width:110px" onchange="state.co.prefix=this.value"><option value="809">+1 809</option><option value="829">+1 829</option><option value="849">+1 849</option></select><input class="inp" type="tel" maxlength="7" value="'+esc(co.phone)+'" placeholder="555-0143" oninput="this.value=this.value.replace(/\\D/g,\'\');state.co.phone=this.value"></div></div></div>'+
-   '<div class="field"><label>Provincia / Zona *</label><select class="inp" onchange="state.co.province=this.value;state.co.shipId=\'\';renderCheckout()"><option value="">Selecciona…</option>'+PROVINCES_LIST.map(function(p){return '<option '+(co.province===p?'selected':'')+'>'+p+'</option>';}).join('')+'</select></div>'+
-   '<div class="field"><label>Método de envío *</label>'+DB.settings.shipping.map(function(m){var av=opts.some(function(o){return o.id===m.id;});
-    var extra=m.id==='pickup'&&!av?'No hay punto en tu provincia':(!av?'No disponible en tu zona':'');
-    return '<div class="opt '+(co.shipId===m.id?'on':'')+(av?'':' off')+'" onclick="'+(av?'state.co.shipId=\''+m.id+'\';renderCheckout()':'')+'"><b>'+esc(m.label)+'</b><span class="pr">'+(m.price?fmt(m.price):'GRATIS')+'</span><small>'+esc(m.eta)+(extra?' · ⛔ '+extra:'')+'</small></div>';}).join('')+'</div>'+
-   (co.shipId==='pickup'?'<div class="field"><label>Punto de recogida *</label><select class="inp" onchange="state.co.pickupId=this.value"><option value="">Selecciona…</option>'+DB.settings.pickup_points.filter(function(pt){return pt.city===co.province;}).map(function(pt){return '<option '+(co.pickupId===pt.label?'selected':'')+' value="'+esc(pt.label)+'">'+esc(pt.label)+' · '+esc(pt.hours)+'</option>';}).join('')+'</select></div>'
-    :co.shipId==='nacional'?'<div class="field"><label>Dirección o punto de paqueo *</label><textarea class="inp" rows="2" oninput="state.co.address=this.value" placeholder="Ej: Punto Caribe Pack, Av. 27 de Febrero #100">'+esc(co.address)+'</textarea></div>'
-    :co.shipId==='local'?'<div class="field"><label>Dirección de entrega *</label><textarea class="inp" rows="2" oninput="state.co.address=this.value" placeholder="Calle, número, sector, referencia">'+esc(co.address)+'</textarea></div>':'')+
+   '<div class="field"><label>Provincia / Zona *</label><select class="inp" onchange="state.co.province=this.value;state.co.shipId=\'\';renderCheckout()"><option value="">Selecciona…</option>'+provinceOptions().map(function(p){return '<option '+(co.province===p.n?'selected':'')+'>'+esc(p.n)+'</option>';}).join('')+'</select></div>'+
+   '<div class="field"><label>Método de envío *</label>'+
+    '<button type="button" class="inp" style="text-align:left;display:flex;justify-content:space-between;align-items:center" onclick="state.shipOpen=!state.shipOpen;renderCheckout()">'+
+     '<span>'+(chosen?esc(chosen.label)+' · '+(chosen.price?fmt(chosen.price):'GRATIS'):'Selecciona método de envío')+'</span><span>'+ic('chev',16)+'</span></button>'+
+    shipBox+'</div>'+specify+
+   (co.shipId==='pickup'?'<div class="field"><label>Punto de recogida *</label><select class="inp" onchange="state.co.pickupId=this.value"><option value="">Selecciona…</option>'+DB.settings.pickup_points.filter(function(pt){return pt.city===co.province;}).map(function(pt){return '<option '+(co.pickupId===pt.label?'selected':'')+' value="'+esc(pt.label)+'">'+esc(pt.label)+' · '+esc(pt.hours)+'</option>';}).join('')+'</select></div>':'')+
    '<div class="field"><label>Notas para el repartidor</label><input class="inp" value="'+esc(co.notes)+'" oninput="state.co.notes=this.value" placeholder="Portón negro, llamar al llegar…"></div>'+
    '<div style="padding-bottom:20px"><button class="btn btn-primary" style="width:100%" onclick="toStep2()">Continuar al pago →</button></div>';
   renderSumBar(false);
@@ -480,26 +515,37 @@ function renderCheckout(){var co=state.co;
   var cod=DB.settings.payments.filter(function(p){return p.type==='cod'&&p.enabled;})[0];
   var card=DB.settings.payments.filter(function(p){return p.type==='card'&&p.enabled;})[0];
   var h='<div class="field"><label>Método de pago *</label>';
-  h+='<div class="opt '+(co.payId==='transfer'?'on':'')+'" onclick="state.co.payId=\'transfer\';if(!state.co.bankId&&'+tr.length+')state.co.bankId=\''+tr[0].id+'\';renderCheckout()"><b>🏦 Transferencia bancaria</b><small>BPD · Banreservas · BHD · Qik (cuentas al confirmar)</small></div>';
-  if(co.payId==='transfer')h+='<div class="field" style="margin-left:10px"><label>Banco destino</label><select class="inp" onchange="state.co.bankId=this.value">'+tr.map(function(t){return '<option value="'+t.id+'" '+(co.bankId===t.id?'selected':'')+'>'+esc(t.bank)+'</option>';}).join('')+'</select></div>';
+  h+='<div class="opt '+(co.payId==='transfer'?'on':'')+'" onclick="state.co.payId=\'transfer\';if(!state.co.bankId&&'+tr.length+')state.co.bankId=\''+tr[0].id+'\';renderCheckout()"><b>🏦 Transferencia bancaria</b><small>BPD · Banreservas · BHD · Qik</small></div>';
+  if(co.payId==='transfer'){
+   h+='<div class="field" style="margin-left:10px"><label>Cuenta a la que transferirás (toca para elegir, copia los datos)</label>'+
+    tr.map(function(t){return '<div class="opt '+(co.bankId===t.id?'on':'')+'" onclick="state.co.bankId=\''+t.id+'\';renderCheckout()"><b>'+esc(t.bank)+'</b><small>'+esc(t.acct)+' · Titular: '+esc(t.holder)+'</small>'+
+     '<button type="button" class="btn btn-outline" style="margin-top:8px;padding:6px 12px;font-size:12px" onclick="event.stopPropagation();copyText(\''+esc(t.bank+' '+t.acct+' '+t.holder)+'\')">'+ic('copy',14)+'Copiar</button></div>';}).join('')+'</div>';
+  }
   h+=cod?'<div class="opt '+(co.payId==='cod'?'on':'')+(codOk?'':' off')+'" onclick="'+(codOk?'state.co.payId=\'cod\';renderCheckout()':'')+'"><b>💵 Efectivo contra entrega</b><small>'+(codOk?'Pagas al recibir (Santo Domingo)':'⛔ Solo disponible en Santo Domingo')+'</small></div>':'';
   h+=card?'<div class="opt '+(co.payId==='card'?'on':'')+'" onclick="state.co.payId=\'card\';renderCheckout()"><b>💳 Tarjeta (Azul)</b><small>Pago seguro procesado por Azul · demo simulada</small></div>':'';
   h+='<div class="opt '+(co.payId==='credit'?'on':'')+'" onclick="state.co.payId=\'credit\';renderCheckout()"><b>📝 A crédito</b><small>Pagas en 30 días · coordinado con la tienda</small></div>';
+  if(co.payId==='transfer'||co.payId==='credit'){
+   h+='<div class="field"><label>📎 Anexar comprobante de pago (opcional)</label><input type="file" accept="image/*" onchange="pickProof(this)">'+
+    (co.proofImage?'<div style="margin-top:8px;display:flex;align-items:center;gap:8px"><img src="'+co.proofImage+'" style="width:56px;height:56px;object-fit:cover;border-radius:10px"><button type="button" class="btn btn-outline" style="padding:6px 10px;font-size:12px" onclick="state.co.proofImage=\'\';renderCheckout()">Quitar</button></div>':'')+'</div>';
+  }
   h+='</div><div style="padding-bottom:20px"><button class="btn btn-outline" onclick="state.co.step=1;renderCheckout()">← Volver</button><button class="btn btn-primary" onclick="confirmOrder()">Confirmar y Enviar Pedido ✔</button></div>';
   $('#coBody').innerHTML=h;renderSumBar(true);}}
 function renderSumBar(withShip){var c=cartCalc(),ship=0;
  if(withShip&&state.co.shipId){var m=shipLabel(state.co.shipId);ship=(m.id==='local'&&c.subtotal>=DB.settings.free_threshold)?0:m.price;}
+ var thumbs=cart.slice(0,4).map(function(l){var p=findP(l.pid);
+  return '<div style="width:38px;height:38px;border-radius:9px;background-size:cover;background-position:center;background-color:var(--surface2);'+((p&&p.image)?'background-image:url('+p.image+')':'')+';border:1px solid var(--border);flex:none"></div>';}).join('');
  var old=$('#sumbar');if(old)old.remove();
  var el=document.createElement('div');el.className='sumbar';el.id='sumbar';
- el.innerHTML='<div class="in"><div class="tot">Subtotal '+fmt(c.subtotal)+(c.discount?' − promo '+fmt(c.discount):'')+(withShip?' · Envío '+(ship?fmt(ship):'GRATIS'):'')+'<b>Total '+fmt(c.net+ship)+'</b></div>'+
-  (withShip?'<button class="btn btn-primary" onclick="confirmOrder()">Confirmar y Enviar Pedido ✔</button>':'<button class="btn btn-primary" onclick="toStep2()">Continuar →</button>')+'</div>';
+ el.innerHTML='<div class="in"><div style="display:flex;gap:6px;margin-right:12px;flex:none">'+thumbs+'</div><div class="tot">Subtotal '+fmt(c.subtotal)+(c.discount?' − promo '+fmt(c.discount):'')+(withShip?' · Envío '+(ship?fmt(ship):'GRATIS'):'')+'<b>Total '+fmt(c.net+ship)+'</b></div>'+
+  (withShip?'<button class="btn btn-primary" onclick="confirmOrder()">Confirmar y Enviar Pedido ✔</button>':'<button class="btn btn-primary" onclick="openCheckout()">Continuar →</button>')+'</div>';
  document.body.appendChild(el);}
 function toStep2(){var co=state.co;
  if(co.name.trim().length<3)return toast('Escribe tu nombre completo','warn');
  if(co.phone.length!==7)return toast('Teléfono: 7 dígitos después del prefijo','warn');
  if(!co.province)return toast('Selecciona tu provincia','warn');
  if(!co.shipId)return toast('Selecciona método de envío','warn');
- if(co.shipId!=='pickup'&&co.address.trim().length<6)return toast('Escribe la dirección de entrega','warn');
+ var chosen=shipOptions().filter(function(m){return m.id===co.shipId;})[0];
+ if(chosen&&chosen.specify&&!co.specify.trim())return toast('Indica '+(chosen.specify==='station'?'la estación':'la plaza'),'warn');
  if(co.shipId==='pickup'&&!co.pickupId)return toast('Selecciona el punto de recogida','warn');
  DB.abandoned=DB.abandoned.filter(function(a){return a.phone!==('+1'+co.prefix+co.phone);});
  DB.abandoned.unshift({phone:'+1'+co.prefix+co.phone,name:co.name,items:cart.slice(),at:new Date().toISOString()});
@@ -513,8 +559,9 @@ function confirmOrder(){var co=state.co;if(!co.payId)return toast('Selecciona m�
  var due=new Date();if(payId==='credito'||(cust&&cust.credit))due.setDate(due.getDate()+30);
  DB.seq.order+=1;
  var o={id:uid(),number:'RD-'+('000'+DB.seq.order).slice(-4),created_at:new Date().toISOString(),customer_name:co.name.trim(),customer_phone:'+1'+co.prefix+co.phone,
-  province:co.province,shipping_method:co.shipId,shipping_cost:ship,address:co.address,pickup_point:co.pickupId,notes:co.notes,
+  province:co.province,shipping_method:co.shipId,shipping_cost:ship,address:co.address,pickup_point:co.pickupId,specify:co.specify,notes:co.notes,
   payment_method:payId,payment_status:'pendiente',status:'pendiente',subtotal:c.subtotal,discount:c.discount,total:c.net+ship,due_date:due.toISOString(),wa_sent_at:null,
+  proof:!!co.proofImage,proofImage:co.proofImage||'',
   items:cart.map(function(l){var p=findP(l.pid);return {pid:l.pid,code:p.code||'',name:p.name,variant:l.variant,qty:l.qty,unit_price:p.price,cost:p.cost,line_total:p.price*l.qty};})};
  DB.orders.unshift(o);
  o.items.forEach(function(it){var p=findP(it.pid);if(p)p.stock=Math.max(0,p.stock-it.qty);});
@@ -531,14 +578,13 @@ function renderConfirm(o){var pm=payLabel(o.payment_method),msg=waOrderMessage(o
   '<div style="margin:16px 0"><button class="btn btn-wa" style="width:100%" onclick="sendOrderWA(\''+o.id+'\')">'+icWa(18)+'Enviar pedido por WhatsApp</button></div>'+
   '<p style="font-size:13px;color:var(--text2)">En móvil se abre el compartir con la tarjeta y el texto juntos: elige WhatsApp y el chat de la tienda. En PC se abre el chat directo y la tarjeta queda copiada para pegar.</p></div>'+
   (pm.type==='transfer'?'<div class="conf-card"><b style="font-size:17px;font-weight:700">Datos para tu transferencia</b><div style="margin-top:12px">'+
-   banks.map(function(b){return '<div class="bankline"><b>'+esc(b.bank)+'</b> '+esc(b.acct)+' · '+esc(b.holder)+'<button onclick="copyText(\''+esc(b.bank+' '+b.acct+' '+b.holder)+'\')">COPIAR</button></div>';}).join('')+
-   '<div style="margin-top:12px"><label class="field" style="margin:0"><span style="font-size:12px;font-weight:700;color:var(--text2)">📎 Ya transferí — subir comprobante</span><input type="file" style="margin-top:8px" onchange="uploadProof(\''+o.id+'\')"></label></div></div>':'')+
+   banks.map(function(b){return '<div class="bankline"><b>'+esc(b.bank)+'</b> '+esc(b.acct)+' · '+esc(b.holder)+'<button onclick="copyText(\''+esc(b.bank+' '+b.acct+' '+b.holder)+'\')">COPIAR</button></div>';}).join('')+'</div>':'')+
+  (o.proofImage?'<div class="conf-card"><b style="font-size:15px;font-weight:700">📎 Comprobante adjunto</b><div style="margin-top:8px"><img src="'+o.proofImage+'" style="width:72px;height:72px;object-fit:cover;border-radius:12px"></div></div>':'')+
   '<div class="conf-card"><b style="font-size:17px;font-weight:700">Texto que se enviará (de subtotal hacia abajo)</b><div class="msgbox" style="margin-top:12px">'+esc(msg)+'</div>'+
   '<div style="margin-top:14px;display:flex;gap:10px;flex-wrap:wrap"><button class="btn btn-outline" onclick="copyText(decodeURIComponent(\''+encodeURIComponent(msg)+'\'))">'+ic('copy',16)+'Copiar texto</button>'+
   '<a class="btn btn-outline" href="https://wa.me/'+storePhone()+'?text='+encodeURIComponent('Hola, consulta sobre mi pedido #'+o.number)+'" target="_blank" rel="noopener noreferrer">'+icWa(16)+'Soporte</a>'+
   '<button class="btn btn-primary" onclick="goTienda()">Seguir comprando</button></div></div>';}
 function markWaSent(id){var o=findO(id);if(o&&!o.wa_sent_at){o.wa_sent_at=new Date().toISOString();persist();toast('Pedido transmitido al vendedor ✔','good');}}
-function uploadProof(id){findO(id).proof=true;persist();toast('Comprobante recibido ✔','good');}
 /* 9 DEEP-LINK */
 (function(){
  if(window.location.search.indexOf('completar=')===-1)return;
