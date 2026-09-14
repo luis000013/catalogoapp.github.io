@@ -214,3 +214,6 @@ table.fin td{padding:14px 12px;border-bottom:1px solid var(--border2)}
 .customer-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 @media print{body *{visibility:hidden}#printArea,#printArea *{visibility:visible}#printArea{position:absolute;left:0;top:0;width:100%;padding:24px}}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+.othumbs{display:flex;margin-right:12px;flex:none}
+.othumb{width:40px;height:40px;border-radius:10px;background-size:cover;background-position:center;background-color:var(--surface2);border:2px solid var(--surface)}
+.othumbs .othumb+.othumb{margin-left:-12px}
