@@ -1,7 +1,7 @@
-/* CatálogoYa v2.6 · admin.js — panel + Supabase + arranque */
+/* CatálogoYa v2.8 · admin.js — panel + Supabase + arranque */
 var TABS=[['pedidos','receipt','Pedidos'],['inventario','box','Inventario'],['finanzas','chart','Márgenes'],['cxc','wallet','CxC'],['publicar','mega','Publicar'],['config','gear','Config']];
 function openAdmin(){if(!DB)return;show('admin');renderAdmin();}
-function renderAdmin(){if(!DB)return;
+function renderAdmin(){if(!DB)return;ensureSettings();
  var logoHtml=DB.logo?'<img src="'+DB.logo+'" alt="">':esc(DB.name.slice(0,2).toUpperCase());
  $('#adminHead').innerHTML=
   '<div class="avatar-sm">'+logoHtml+'</div>'+
@@ -250,7 +250,7 @@ function renderPubSeg(){var seg=$('#pubSeg').value;
  var p=findP($('#pubSel').value);if(!p){$('#pubSegList').innerHTML='';return;}
  $('#pubSegList').innerHTML=list.map(function(c){return '<div class="row" style="margin-bottom:8px"><div class="row-main"><b>'+esc(c.name)+'</b><small>+1 '+esc(c.wa)+'</small></div><a class="btn btn-wa" style="padding:8px 14px;font-size:12px" target="_blank" rel="noopener noreferrer" href="https://wa.me/'+c.wa+'?text='+encodeURIComponent('Hola '+c.name.split(' ')[0]+' 👋 Llegó '+p.name+' a '+fmt(p.price)+'. Míralo: '+storeUrl()+'?t='+DB.handle)+'">1-tap</a></div>';}).join('')||'<small style="color:var(--text2)">Sin clientes en este segmento.</small>';}
 /* ── CONFIG ── */
-function renderConfig(b){var s=DB.settings;
+function renderConfig(b){ensureSettings();var s=DB.settings;
  b.innerHTML='<div class="finance-section"><h3 style="font-size:17px;font-weight:700;margin-bottom:10px">🔗 Link público del catálogo</h3>'+
   '<p style="font-size:13px;color:var(--text2);margin-bottom:10px">Este link abre SOLO el catálogo (sin panel). Ponlo en tu bio de Instagram o envíaselo a clientes.</p>'+
   '<div class="bankline"><b style="word-break:break-all">'+catalogLink()+'</b><button onclick="copyText(catalogLink())">COPIAR</button></div>'+
@@ -374,7 +374,7 @@ if(SB_ON){
   if(r.error){$('#liErr').textContent='Email o contraseña incorrectos.';return;}
   var db=await sbPullStore(r.data.user.id);
   if(!db){$('#liErr').textContent='Tu tienda aún no existe en la base.';return;}
-  DB=db;STORES[DB.id]=DB;cart=[];persistCart();
+  DB=db;STORES[DB.id]=DB;cart=[];persistCart();ensureSettings();
   applyTheme(curTheme());renderCartBadge();show('tienda');sbRealtime();
   toast('Bienvenida/o, '+DB.name+' ✔','good');};
  doRegister=async function(){
@@ -390,7 +390,7 @@ if(SB_ON){
   if(ins.error&&ins.error.code!=='23505')console.warn(ins.error.message);
   if(r.data.session){
    var db=await sbPullStore(uid);
-   DB=db;STORES[DB.id]=DB;cart=[];persistCart();
+   DB=db;STORES[DB.id]=DB;cart=[];persistCart();ensureSettings();
    applyTheme(curTheme());renderCartBadge();show('tienda');sbRealtime();
    toast('🎉 Tienda creada. Agrega tu primer producto.','good');
    setTimeout(function(){openAdmin();state.tab='inventario';renderAdmin();openProd();},600);
@@ -433,7 +433,7 @@ if(SB_ON){
    if(!db){show('auth');renderCartBadge();
     if(!uid)toast('Tienda pública no encontrada: regístrate o usa ?t=handle','warn');
     return;}
-   DB=db;STORES[DB.id]=DB;
+   DB=db;STORES[DB.id]=DB;ensureSettings();
    renderCartBadge();show('tienda');
    if(!DB._anon)sbRealtime();});});
 })();
