@@ -1,4 +1,4 @@
-/* CatálogoYa v2.5 · admin.js — panel + Supabase + arranque */
+/* CatálogoYa v2.6 · admin.js — panel + Supabase + arranque */
 var TABS=[['pedidos','receipt','Pedidos'],['inventario','box','Inventario'],['finanzas','chart','Márgenes'],['cxc','wallet','CxC'],['publicar','mega','Publicar'],['config','gear','Config']];
 function openAdmin(){if(!DB)return;show('admin');renderAdmin();}
 function renderAdmin(){if(!DB)return;
@@ -17,6 +17,7 @@ function renderAdmin(){if(!DB)return;
  if(state.tab==='pedidos')renderPedidos(b);else if(state.tab==='inventario')renderInv(b);
  else if(state.tab==='finanzas')renderFin(b);else if(state.tab==='cxc')renderCxC(b);
  else if(state.tab==='publicar')renderPub(b);else renderConfig(b);}
+/* ── PEDIDOS ── */
 function renderPedidos(b){var pf=state.pf;
  var list=DB.orders.filter(function(o){return (pf.status==='todos'||o.status===pf.status)&&((o.number+o.customer_name).toLowerCase().indexOf(pf.q.toLowerCase())!==-1);});
  var pend=DB.orders.filter(function(o){return o.status==='pendiente';}).length;
@@ -36,7 +37,7 @@ function openOrder(id){var o=findO(id);$('#orderBk').className='bk show';$('#ord
   o.items.map(function(it){var p=findP(it.pid);var v=Object.keys(it.variant).map(function(k){return it.variant[k];}).join(' · ');
    return '<div class="cline">'+(p?swHTML(p):'')+'<div class="row-main"><b style="font-size:14px">'+esc(it.name)+(it.code?' <span style="color:var(--text2);font-size:11px">'+esc(it.code)+'</span>':'')+'</b><small>'+(v?esc(v)+' · ':'')+it.qty+' × '+fmt(it.unit_price)+' · costo '+fmt(it.cost)+'</small></div><b style="font-size:14px">'+fmt(it.line_total)+'</b></div>';}).join('')+
   '<div style="font-size:13px;margin:12px 0;color:var(--text2)">Subtotal '+fmt(o.subtotal)+(o.discount?' · promo −'+fmt(o.discount):'')+' · Envío '+(o.shipping_cost?fmt(o.shipping_cost):'GRATIS')+' · <b style="color:var(--text)">Total '+fmt(o.total)+'</b></div>'+
-  '<div style="font-size:13px;margin-bottom:10px;color:var(--text2)">🚚 '+esc(shipLabel(o.shipping_method).label)+'<br>📍 '+esc(o.shipping_method==='pickup'?o.pickup_point:o.address)+'<br>💳 '+esc(payLabel(o.payment_method).bank)+(o.proof?' · 📎 comprobante recibido':'')+'</div>'+
+  '<div style="font-size:13px;margin-bottom:10px;color:var(--text2)">🚚 '+esc(shipLabel(o.shipping_method).label)+(o.specify?' ('+esc(o.specify)+')':'')+'<br>📍 '+esc(o.shipping_method==='pickup'?o.pickup_point:o.address)+'<br>💳 '+esc(payLabel(o.payment_method).bank)+(o.proofImage?' · 📎 <a href="'+o.proofImage+'" target="_blank" rel="noopener noreferrer" style="color:var(--blue)">ver comprobante</a>':'')+'</div>'+
   '<a class="btn btn-wa" style="width:100%;margin:10px 0" href="https://wa.me/'+o.customer_phone.replace('+','')+'?text='+encodeURIComponent('Hola '+o.customer_name.split(' ')[0]+' 👋 Tu pedido #'+o.number+': estado '+o.status.toUpperCase()+'. ¡Gracias!')+'" target="_blank" rel="noopener noreferrer">'+icWa(17)+'Notificar al cliente</a>'+
   '<div class="field"><label>Cambiar estado</label><div class="chips">'+['pendiente','enviado','entregado','cancelado'].map(function(s){return '<button class="chip '+(o.status===s?'on':'')+'" onclick="setStatus(\''+o.id+'\',\''+s+'\')">'+s+'</button>';}).join('')+'</div></div>'+
   '<div class="field"><label>Pagos · saldo '+fmt(bal)+'</label>'+DB.payments.filter(function(p){return p.order_id===o.id;}).map(function(p){return '<div class="bankline">'+fmt(p.amount)+' · '+esc(payLabel(p.method).bank)+' · '+esc(p.reference||'')+'</div>';}).join('')+
@@ -66,6 +67,7 @@ function openReceipt(id){var r=null;DB.receipts.forEach(function(x){if(x.id===id
   '<tr><td colspan="2"><b>TOTAL</b></td><td><b>'+fmt(o.total)+'</b></td></tr></table>'+
   '<div style="font-size:12px">Pagado vía: '+esc(payLabel(o.payment_method).bank)+'<br>Monto recibido: '+fmt(paidOf(o.id))+'<br><br>_________________________<br>Firma · Gracias por su compra</div></div>'+
   '<div style="margin-top:16px;display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-primary" onclick="window.print()">'+ic('print',16)+'Imprimir / PDF</button><button class="btn btn-outline" onclick="toast(\'Recibo enviado por email (simulado)\',\'good\')">✉ Email</button><button class="btn btn-outline" onclick="closeModal()">Cerrar</button></div>');}
+/* ── VENTA MANUAL ── */
 function openManualSale(){window._ms={lines:[],pay:'transfer_bpd',status:'pendiente',paid:true,name:'',phone:''};renderManualSale();}
 function msAdd(){var pid=$('#msProd').value,q=parseInt($('#msQty').value,10)||1;var p=findP(pid);if(!p)return toast('Selecciona un producto','warn');
  var f=null;window._ms.lines.forEach(function(l){if(l.pid===pid)f=l;});
@@ -94,13 +96,14 @@ function msSave(){var ms=window._ms;
  var sub=items.reduce(function(a,i){return a+i.line_total;},0);
  var due=new Date();if(ms.pay==='credito')due.setDate(due.getDate()+30);
  var o={id:uid(),number:'RD-'+('000'+DB.seq.order).slice(-4),created_at:new Date().toISOString(),customer_name:ms.name.trim(),customer_phone:ms.phone?'+1'+ms.phone:'',
-  province:'Venta manual',shipping_method:'pickup',shipping_cost:0,address:'',pickup_point:'',notes:'Registrada manualmente en el panel',
-  payment_method:ms.pay,payment_status:ms.paid?'pagado':'pendiente',status:ms.status,subtotal:sub,discount:0,total:sub,due_date:due.toISOString(),wa_sent_at:new Date().toISOString(),items:items};
+  province:'Venta manual',shipping_method:'pickup',shipping_cost:0,address:'',pickup_point:'',specify:'',notes:'Registrada manualmente en el panel',
+  payment_method:ms.pay,payment_status:ms.paid?'pagado':'pendiente',status:ms.status,subtotal:sub,discount:0,total:sub,due_date:due.toISOString(),wa_sent_at:new Date().toISOString(),proof:false,proofImage:'',items:items};
  items.forEach(function(it){var p=findP(it.pid);if(p)p.stock=Math.max(0,p.stock-it.qty);});
  DB.orders.unshift(o);
  if(ms.paid){DB.payments.push({id:uid(),order_id:o.id,amount:sub,method:ms.pay,reference:'Venta manual',received_at:new Date().toISOString()});
   DB.seq.receipt+=1;DB.receipts.unshift({id:uid(),number:'R-'+('000'+DB.seq.receipt).slice(-4),order_id:o.id,issued_at:new Date().toISOString()});}
  persist();closeModal();renderAdmin();toast('Venta #'+o.number+' registrada ✔','good');}
+/* ── INVENTARIO ── */
 function renderInv(b){
  var mg=function(p){return p.price>0?Math.round((p.price-p.cost)/p.price*100):0;};
  b.innerHTML='<div class="invcount"><span>'+DB.products.length+' productos</span><button onclick="openProd()">'+ic('plus',18)+'Nuevo producto</button></div>'+
@@ -153,6 +156,7 @@ function saveProd(){var id=$('#fId').value,name=$('#fName').value.trim(),price=p
  if(id){var p=findP(id);p.name=name;p.price=price;p.cost=cost;p.stock=stock;p.cat=cat;p.subcat=sub;p.code=code;p.sizes=sizes;p.colors=colors;p.desc=$('#fDesc').value;p.image=prodImg;}
  else DB.products.unshift({id:uid(),code:code,subcat:sub,name:name,cat:cat,price:price,cost:cost,stock:stock,desc:$('#fDesc').value,sizes:sizes,colors:colors,hue:200,image:prodImg});
  persist();closeProd();renderAdmin();renderCatalog();toast('Guardado ✔','good');}
+/* ── FINANZAS ── */
 function renderFin(b){var days=state.finPeriod,cut=new Date();cut.setDate(cut.getDate()-days);
  var os=DB.orders.filter(function(o){return o.status!=='cancelado'&&new Date(o.created_at)>=cut;});
  var rev=0,cogs=0,per={};
@@ -170,6 +174,7 @@ function renderFin(b){var days=state.finPeriod,cut=new Date();cut.setDate(cut.ge
   '<div style="overflow-x:auto"><table class="fin"><tr><th>Producto</th><th>Uds</th><th>Ingresos</th><th>COGS</th><th>Ganancia</th><th>Margen</th></tr>'+
   rows.map(function(r){var m=r.rev?Math.round((r.rev-r.cost)/r.rev*100):0;
    return '<tr><td style="font-weight:600">'+esc(r.name)+'</td><td>'+r.units+'</td><td>'+fmt(r.rev)+'</td><td>'+fmt(r.cost)+'</td><td><b>'+fmt(r.rev-r.cost)+'</b></td><td><span class="pill '+(m>=40?'ok':m<15?'out':'low')+'">'+m+'%</span></td></tr>';}).join('')+'</table></div></div>';}
+/* ── CxC ── */
 function renderCxC(b){var open=DB.orders.filter(function(o){return o.payment_method==='credito'&&o.status!=='cancelado'&&balanceOf(o)>0;});
  var bk={'Al día':0,'1–30':0,'31–60':0,'61–90':0,'90+':0};
  function bOf(o){var d=Math.floor((Date.now()-new Date(o.due_date))/86400000);if(d<=0)return 'Al día';if(d<=30)return '1–30';if(d<=60)return '31–60';if(d<=90)return '61–90';return '90+';}
@@ -184,6 +189,7 @@ function renderCxC(b){var open=DB.orders.filter(function(o){return o.payment_met
     '<div class="due">Vence '+fDate(o.due_date)+' · saldo '+fmt(balanceOf(o))+'</div>'+
     '<div class="btns"><button class="btn btn-outline" onclick="payModal(\''+o.id+'\')">'+ic('wallet',16)+'Cobrar</button>'+
     '<a class="btn btn-primary" target="_blank" rel="noopener noreferrer" href="https://wa.me/'+o.customer_phone.replace('+','')+'?text='+encodeURIComponent('Hola '+o.customer_name.split(' ')[0]+' 👋 Recordatorio: saldo '+fmt(balanceOf(o))+' del pedido #'+o.number+'.')+'">'+ic('bell',16)+'Recordar</a></div></div>';}).join('')||'<p style="color:var(--text2);text-align:center;padding:30px 0">🎉 No hay saldos de crédito abiertos.</p>';}
+/* ── PUBLICAR ── */
 function captionFor(p){var vs=[];if(p.sizes.length)vs.push('Tallas '+p.sizes.join('–'));if(p.colors.length)vs.push(p.colors.map(function(c){return c.n;}).join('/'));
  return '🖤 '+p.name+' — '+fmt(p.price)+'\n'+vs.join(' · ')+' · '+(p.stock>0?'✔ Disponible':'⛔ Agotado')+'\n📲 Pídelo: '+storeUrl()+'?t='+DB.handle+'\n#modaRD #santodomingo';}
 function pubProductIG(id){var p=findP(id);if(!p)return;
@@ -218,6 +224,13 @@ function renderPubPreview(){var p=findP($('#pubSel').value);if(!p)return;$('#pub
  $('#pubPrev').innerHTML=tileOpen(p)+(p.stock<=0?'<span class="tb out">Agotado</span>':'')+'</div>'+
   '<span class="pub-badge-l">'+esc(p.name.charAt(0).toUpperCase())+'</span>'+
   '<span class="pub-badge-r">'+p.stock+' disp.</span>';}
+function pubIG(){var p=findP($('#pubSel').value);if(!p)return toast('Crea un producto primero','warn');
+ var cap=$('#pubCap').value;copyText(cap);
+ var file=null;if(p.image){try{file=dataURLtoFile(p.image,'post.jpg');}catch(e){}}
+ if(file&&navigator.canShare&&navigator.canShare({files:[file]})){navigator.share({files:[file],text:cap,title:'CatálogoYa'}).catch(function(){});toast('Elige Instagram: la foto va con el texto copiado','good');}
+ else{downloadData(p.image,'post-'+(p.code||p.id)+'.jpg');window.open('https://www.instagram.com/','_blank');toast('Foto descargada y texto copiado: pégalo en Instagram','warn');}
+ DB.posts.unshift({id:uid(),pid:p.id,caption:cap,status:'published',at:new Date().toISOString(),when:''});
+ persist();renderAdmin();}
 function pubPost(sched){var p=findP($('#pubSel').value);if(!p)return toast('Crea un producto primero','warn');var when=$('#pubWhen').value;
  if(sched&&!when)return toast('Elige fecha y hora','warn');
  DB.posts.unshift({id:uid(),pid:p.id,caption:$('#pubCap').value,status:sched?'scheduled':'published',at:new Date().toISOString(),when:when});
@@ -236,6 +249,7 @@ function renderPubSeg(){var seg=$('#pubSeg').value;
   return os.some(function(o){return o.status==='entregado'&&(Date.now()-new Date(o.created_at))/86400000<=90;});});
  var p=findP($('#pubSel').value);if(!p){$('#pubSegList').innerHTML='';return;}
  $('#pubSegList').innerHTML=list.map(function(c){return '<div class="row" style="margin-bottom:8px"><div class="row-main"><b>'+esc(c.name)+'</b><small>+1 '+esc(c.wa)+'</small></div><a class="btn btn-wa" style="padding:8px 14px;font-size:12px" target="_blank" rel="noopener noreferrer" href="https://wa.me/'+c.wa+'?text='+encodeURIComponent('Hola '+c.name.split(' ')[0]+' 👋 Llegó '+p.name+' a '+fmt(p.price)+'. Míralo: '+storeUrl()+'?t='+DB.handle)+'">1-tap</a></div>';}).join('')||'<small style="color:var(--text2)">Sin clientes en este segmento.</small>';}
+/* ── CONFIG ── */
 function renderConfig(b){var s=DB.settings;
  b.innerHTML='<div class="finance-section"><h3 style="font-size:17px;font-weight:700;margin-bottom:10px">🔗 Link público del catálogo</h3>'+
   '<p style="font-size:13px;color:var(--text2);margin-bottom:10px">Este link abre SOLO el catálogo (sin panel). Ponlo en tu bio de Instagram o envíaselo a clientes.</p>'+
@@ -252,20 +266,37 @@ function renderConfig(b){var s=DB.settings;
     '<div class="field"><label>Instagram de la tienda</label><input class="inp" id="pfInsta" value="'+esc(s.insta||'')+'" placeholder="@tutienda"></div></div>'+
     '<div class="field"><label>Bio estilo Instagram · <span id="bioCount">'+(DB.bio?DB.bio.length:0)+'</span>/150</label><textarea class="inp" id="pfBio" rows="3" maxlength="150" oninput="bioCount(this.value)" placeholder="Tu tienda en 3 líneas…">'+esc(DB.bio||'')+'</textarea></div>'+
     '<button class="btn btn-primary" onclick="saveProfile()">Guardar perfil</button></div></div></div>'+
+ '<div class="finance-section"><h3 style="font-size:17px;font-weight:700;margin-bottom:12px">🚚 Métodos de envío (edita nombre, precio, etiqueta y actívalos)</h3>'+
+  s.shipping.map(function(m,i){return '<div class="row" style="margin-bottom:10px;align-items:flex-start"><div class="row-main">'+
+    '<input class="inp" style="margin-bottom:6px" value="'+esc(m.label)+'" onchange="shipField('+i+',\'label\',this.value)">'+
+    '<div style="display:flex;gap:8px;flex-wrap:wrap"><input type="number" value="'+m.price+'" style="width:110px;padding:8px;border:1.5px solid var(--border);border-radius:10px;background:var(--surface2);color:var(--text)" onchange="shipField('+i+',\'price\',parseFloat(this.value)||0)">'+
+    '<input class="inp" style="flex:1;min-width:140px" value="'+esc(m.eta)+'" onchange="shipField('+i+',\'eta\',this.value)"></div></div>'+
+    '<label style="font-size:12px;font-weight:700;display:flex;align-items:center;gap:6px"><input type="checkbox" '+(m.active?'checked':'')+' onchange="shipActive('+i+',this.checked)"> Activo</label></div>';}).join('')+'</div>'+
+ '<div class="finance-section"><h3 style="font-size:17px;font-weight:700;margin-bottom:12px">📍 Provincias del formulario (edita y activa)</h3>'+
+  s.provinces.map(function(p,i){return '<div class="row" style="margin-bottom:8px"><input class="inp" style="flex:1" value="'+esc(p.n)+'" onchange="provField('+i+',\'n\',this.value)">'+
+    '<select class="inp" style="width:130px" onchange="provField('+i+',\'z\',this.value)">'+['ZONA_SD','ZONA_CIBAO','ZONA_ESTE','ZONA_SUR'].map(function(z){return '<option '+(p.z===z?'selected':'')+'>'+z+'</option>';}).join('')+'</select>'+
+    '<label style="font-size:12px;font-weight:700;display:flex;align-items:center;gap:6px"><input type="checkbox" '+(p.active?'checked':'')+' onchange="provActive('+i+',this.checked)"> Activa</label>'+
+    '<button class="icon-btn" onclick="provDel('+i+')">'+ic('x',16)+'</button></div>';}).join('')+
+  '<div style="display:flex;gap:8px;margin-top:8px"><input class="inp" id="newProv" placeholder="Nueva provincia…" style="flex:1"><select class="inp" id="newProvZ" style="width:130px"><option>ZONA_SD</option><option>ZONA_CIBAO</option><option>ZONA_ESTE</option><option>ZONA_SUR</option></select><button class="btn btn-outline" onclick="provAdd()">'+ic('plus',16)+'</button></div></div>'+
+ '<div class="finance-section"><h3 style="font-size:17px;font-weight:700;margin-bottom:12px">💵 Contra entrega disponible en zonas</h3>'+
+  '<div class="chips">'+['ZONA_SD','ZONA_CIBAO','ZONA_ESTE','ZONA_SUR'].map(function(z){return '<button class="chip '+(s.cod_zones.indexOf(z)!==-1?'on':'')+'" onclick="toggleCod(\''+z+'\')">'+z+'</button>';}).join('')+'</div></div>'+
  '<div class="finance-section"><h3 style="font-size:17px;font-weight:700;margin-bottom:14px">Umbrales y promociones</h3>'+
   '<div class="fgrid"><div class="field"><label>Umbral envío gratis (RD$)</label><input class="inp" id="cfgFree" type="number" value="'+s.free_threshold+'"></div>'+
   '<div class="field"><label>Umbral low-stock</label><input class="inp" id="cfgLow" type="number" value="'+s.low_stock+'"></div></div>'+
   '<div class="fgrid"><div class="field"><label>Promo: subtotal mín.</label><input class="inp" id="cfgPMin" type="number" value="'+s.promo.min+'"></div><div class="field"><label>Promo: % desc.</label><input class="inp" id="cfgPPct" type="number" value="'+s.promo.percent+'"></div></div>'+
   '<button class="btn btn-outline" onclick="saveCfg()">Guardar umbrales y promo</button></div>'+
- '<div class="finance-section"><h3 style="font-size:17px;font-weight:700;margin-bottom:14px">Métodos de envío</h3>'+
-  s.shipping.map(function(m,i){return '<div class="row" style="margin-bottom:8px"><div class="row-main"><b>'+esc(m.label)+'</b><small>'+esc(m.eta)+'</small></div><input type="number" value="'+m.price+'" style="width:110px;padding:8px;border:1.5px solid var(--border);border-radius:10px;background:var(--surface2);color:var(--text)" onchange="DB.settings.shipping['+i+'].price=parseFloat(this.value)||0;persist();toast(\'Envío actualizado\',\'good\')"></div>';}).join('')+'</div>'+
- '<div class="finance-section"><h3 style="font-size:17px;font-weight:700;margin-bottom:14px">Contra entrega por zona</h3>'+
-  '<div class="chips">'+['ZONA_SD','ZONA_CIBAO','ZONA_ESTE','ZONA_SUR'].map(function(z){return '<button class="chip '+(s.cod_zones.indexOf(z)!==-1?'on':'')+'" onclick="toggleCod(\''+z+'\')">'+z+'</button>';}).join('')+'</div></div>'+
  '<div class="finance-section"><h3 style="font-size:17px;font-weight:700;margin-bottom:14px">Cuentas bancarias</h3>'+
   s.payments.filter(function(p){return p.type==='transfer';}).map(function(p){var i=s.payments.indexOf(p);
    return '<div class="row" style="margin-bottom:8px"><div class="row-main"><input class="inp" value="'+esc(p.bank)+'" style="font-weight:700" onchange="DB.settings.payments['+i+'].bank=this.value;persist()">'+
    '<input class="inp" value="'+esc(p.acct)+' · '+esc(p.holder)+'" style="margin-top:6px;font-size:12px" onchange="var v=this.value.split(\'·\');DB.settings.payments['+i+'].acct=(v[0]||\'\').trim();DB.settings.payments['+i+'].holder=(v[1]||\'\').trim();persist()"></div>'+
    '<label style="font-size:11px;font-weight:700;display:flex;align-items:center;gap:6px"><input type="checkbox" '+(p.enabled?'checked':'')+' onchange="DB.settings.payments['+i+'].enabled=this.checked;persist()"> activo</label></div>';}).join('')+'</div>';}
+function shipField(i,k,v){DB.settings.shipping[i][k]=v;persist();toast('Método actualizado ✔','good');}
+function shipActive(i,v){DB.settings.shipping[i].active=v;persist();renderAdmin();toast(v?'Método activado':'Método desactivado','good');}
+function provField(i,k,v){DB.settings.provinces[i][k]=v;persist();toast('Provincia actualizada ✔','good');}
+function provActive(i,v){DB.settings.provinces[i].active=v;persist();toast(v?'Provincia activada':'Provincia desactivada','good');}
+function provDel(i){DB.settings.provinces.splice(i,1);persist();renderAdmin();toast('Provincia eliminada','warn');}
+function provAdd(){var n=$('#newProv').value.trim();if(!n)return toast('Escribe el nombre','warn');
+ DB.settings.provinces.push({n:n,z:$('#newProvZ').value,active:true});persist();renderAdmin();toast('Provincia agregada ✔','good');}
 function bioCount(v){var el=$('#bioCount');if(el)el.textContent=v.length;}
 function pickLogo(inp){if(!inp.files||!inp.files[0])return;
  fileToDataURL(inp.files[0],256,true,function(d){DB.logo=d;persist();renderAdmin();toast('Logo actualizado ✔','good');});}
@@ -279,7 +310,7 @@ function saveCfg(){var s=DB.settings;s.free_threshold=parseFloat($('#cfgFree').v
 function toggleCod(z){var i=DB.settings.cod_zones.indexOf(z);if(i===-1)DB.settings.cod_zones.push(z);else DB.settings.cod_zones.splice(i,1);persist();renderAdmin();toast('Zonas COD actualizadas','good');}
 function resetDemo(){askConfirm('¿Restaurar la tienda demo local? (No borra tu cuenta de Supabase)',function(){LSdel('cy2-stores');LSdel('cy2-cart');LSdel('cy2-session');
  STORES={'s-demo':DEMO_STORE()};persistStores();cart=[];persistCart();setSession('s-demo');applyTheme(curTheme());renderCartBadge();show('tienda');toast('Demo restaurada','good');});}
-/* SUPABASE */
+/* ── SUPABASE ── */
 var COLS=['orders','customers','payments','receipts','reviews','posts','abandoned'];
 function sbBadKey(err){if(err&&/api key|unauthorized|jwt/i.test(err.message||''))toast('Clave API inválida: revisa supabase-config.js','warn');}
 async function sbPullStore(uid){
@@ -376,9 +407,10 @@ if(SB_ON){
   var payId=co.payId==='transfer'?co.bankId:(co.payId==='cod'?'cod':(co.payId==='credit'?'credito':'card_azul'));
   var dueN=new Date();if(payId==='credito')dueN.setDate(dueN.getDate()+30);
   var o={id:uid(),number:'',created_at:'',customer_name:co.name.trim(),customer_phone:'+1'+co.prefix+co.phone,
-   province:co.province,shipping_method:co.shipId,shipping_cost:ship,address:co.address,pickup_point:co.pickupId,notes:co.notes,
+   province:co.province,shipping_method:co.shipId,shipping_cost:ship,address:co.address,pickup_point:co.pickupId,specify:co.specify,notes:co.notes,
    payment_method:payId,payment_status:'pendiente',status:'pendiente',subtotal:c.subtotal,discount:c.discount,
    total:c.net+ship,due_date:dueN.toISOString(),wa_sent_at:null,
+   proof:!!co.proofImage,proofImage:co.proofImage||'',
    items:cart.map(function(l){var p=findP(l.pid);
     return {pid:l.pid,code:p.code||'',name:p.name,variant:l.variant,qty:l.qty,unit_price:p.price,cost:p.cost||0,line_total:p.price*l.qty};})};
   var res=await sb.rpc('place_order',{p_store:DB.id,p_order:o,p_items:o.items});
