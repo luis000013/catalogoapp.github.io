@@ -1,4 +1,4 @@
-/* CatálogoYa v2.6 · app.js — núcleo público */
+/* CatálogoYa v2.8 · app.js — núcleo público */
 /* 1 ICONOS */
 var ICON={
  cart:'<circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/>',
@@ -63,18 +63,12 @@ function DEFSettings(){return {free_threshold:5000,low_stock:3,promo:{min:3000,p
   {id:'metro',label:'Contra entrega en estación de metro',price:150,zones:['ZONA_SD'],eta:'Mismo día',active:true,specify:'station'},
   {id:'plaza',label:'Entrega en plaza comercial',price:200,zones:['ZONA_SD','ZONA_CIBAO'],eta:'24–48 h',active:true,specify:'plaza'}],
  provinces:[
-  {n:'Distrito Nacional',z:'ZONA_SD',active:true},
-  {n:'Santo Domingo Este',z:'ZONA_SD',active:true},
-  {n:'Santo Domingo Oeste',z:'ZONA_SD',active:true},
-  {n:'Santo Domingo Norte',z:'ZONA_SD',active:true},
-  {n:'Santiago',z:'ZONA_CIBAO',active:true},
-  {n:'La Vega',z:'ZONA_CIBAO',active:true},
-  {n:'Puerto Plata',z:'ZONA_CIBAO',active:true},
-  {n:'Punta Cana',z:'ZONA_ESTE',active:true},
-  {n:'La Romana',z:'ZONA_ESTE',active:true},
-  {n:'San Pedro de Macorís',z:'ZONA_ESTE',active:true},
-  {n:'San Cristóbal',z:'ZONA_SUR',active:true},
-  {n:'Barahona',z:'ZONA_SUR',active:true}],
+  {n:'Distrito Nacional',z:'ZONA_SD',active:true},{n:'Santo Domingo Este',z:'ZONA_SD',active:true},
+  {n:'Santo Domingo Oeste',z:'ZONA_SD',active:true},{n:'Santo Domingo Norte',z:'ZONA_SD',active:true},
+  {n:'Santiago',z:'ZONA_CIBAO',active:true},{n:'La Vega',z:'ZONA_CIBAO',active:true},
+  {n:'Puerto Plata',z:'ZONA_CIBAO',active:true},{n:'Punta Cana',z:'ZONA_ESTE',active:true},
+  {n:'La Romana',z:'ZONA_ESTE',active:true},{n:'San Pedro de Macorís',z:'ZONA_ESTE',active:true},
+  {n:'San Cristóbal',z:'ZONA_SUR',active:true},{n:'Barahona',z:'ZONA_SUR',active:true}],
  pickup_points:[{city:'Distrito Nacional',label:'Tienda Aurora — Av. España #1212, Gazcue',hours:'Lun–Sáb 9am–6pm'},{city:'Santiago',label:'Punto Aurora — Calle Del Sol #45',hours:'Lun–Vie 10am–5pm'}],
  payments:[{id:'transfer_bpd',type:'transfer',bank:'Banco Popular Dominicano',acct:'Ahorros 796-21458-7',holder:'Aurora Boutique SRL',enabled:true},
   {id:'transfer_banreservas',type:'transfer',bank:'Banreservas',acct:'Corriente 001-55875-9',holder:'Aurora Boutique SRL',enabled:true},
@@ -83,6 +77,20 @@ function DEFSettings(){return {free_threshold:5000,low_stock:3,promo:{min:3000,p
   {id:'cod',type:'cod',bank:'Efectivo contra entrega',enabled:true},
   {id:'card_azul',type:'card',bank:'Tarjeta Crédito/Débito (Azul)',enabled:true},
   {id:'credito',type:'credit',bank:'A crédito (30 días)',enabled:true}]};}
+/* v2.8: completa settings antiguos para que Config y selects no queden vacíos */
+function ensureSettings(){
+ if(!DB)return;
+ var d=DEFSettings(); var s=DB.settings=DB.settings||{};
+ if(!s.shipping||!s.shipping.length)s.shipping=d.shipping; else s.shipping.forEach(function(m){if(m.active===undefined)m.active=true;});
+ if(!s.provinces||!s.provinces.length)s.provinces=d.provinces; else s.provinces.forEach(function(p){if(p.active===undefined)p.active=true;if(!p.z)p.z='ZONA_SD';});
+ if(!s.payments||!s.payments.length)s.payments=d.payments; else if(!s.payments.some(function(p){return p.id==='credito';}))s.payments.push(d.payments[d.payments.length-1]);
+ if(!s.pickup_points||!s.pickup_points.length)s.pickup_points=d.pickup_points;
+ if(s.free_threshold===undefined)s.free_threshold=d.free_threshold;
+ if(s.low_stock===undefined)s.low_stock=d.low_stock;
+ if(!s.promo)s.promo=d.promo;
+ if(!s.cod_zones)s.cod_zones=d.cod_zones;
+ if(s.insta===undefined)s.insta='';
+}
 function dAgo(n){var d=new Date();d.setDate(d.getDate()-n);return d.toISOString();}
 function DEMO_STORE(){
  var st=DEFSettings(); st.insta='@auroraboutique';
@@ -109,11 +117,11 @@ function DEMO_STORE(){
    {id:'c2',name:'Fernanda Ruiz',wa:'18493314567',status:'entregado',notes:'Mayorista: bolsos y pañuelos.',credit:true},
    {id:'c3',name:'Lucas Vega',wa:'18098123456',status:'entregado',notes:'Pedido RD-0002 pendiente de saldo.',credit:false}],
   orders:[
-   {id:'o1',number:'RD-0001',created_at:dAgo(2),customer_name:'Camila Rojas',customer_phone:'+18095540122',province:'Distrito Nacional',shipping_method:'uber',shipping_cost:250,address:'Calle El Sol #12, Gazcue',pickup_point:'',payment_method:'transfer_bpd',payment_status:'pagado',status:'entregado',subtotal:3100,discount:0,total:3350,due_date:dAgo(2),wa_sent_at:dAgo(2),items:[{pid:'AU-001',code:'AU-001',name:'Vestido Midi Plisado',variant:{Talla:'M',Color:'Verde Salvia'},qty:1,unit_price:2450,cost:1300,line_total:2450},{pid:'AU-006',code:'AU-006',name:'Aros Perla Natural',variant:{Color:'Perla'},qty:1,unit_price:650,cost:250,line_total:650}]},
-   {id:'o2',number:'RD-0002',created_at:dAgo(6),customer_name:'Lucas Vega',customer_phone:'+18098123456',province:'Santiago',shipping_method:'agencia',shipping_cost:350,address:'Punto Caribe Pack Santiago',pickup_point:'',payment_method:'credito',payment_status:'pendiente',status:'enviado',subtotal:3450,discount:0,total:3800,due_date:dAgo(-24),wa_sent_at:dAgo(6),items:[{pid:'AU-011',code:'AU-011',name:'Botín Cuero Miel',variant:{Talla:'40',Color:'Miel'},qty:1,unit_price:3450,cost:1800,line_total:3450}]},
-   {id:'o3',number:'RD-0003',created_at:dAgo(1),customer_name:'Fernanda Ruiz',customer_phone:'+18493314567',province:'Distrito Nacional',shipping_method:'pickup',shipping_cost:0,address:'',pickup_point:'Tienda Aurora — Av. España #1212, Gazcue',payment_method:'transfer_banreservas',payment_status:'pendiente',status:'pendiente',subtotal:4500,discount:0,total:4500,due_date:dAgo(1),wa_sent_at:dAgo(1),items:[{pid:'AU-008',code:'AU-008',name:'Bolso Tote Cuero',variant:{Color:'Marrón'},qty:2,unit_price:2250,cost:1100,line_total:4500}]}],
+   {id:'o1',number:'RD-0001',created_at:dAgo(2),customer_name:'Camila Rojas',customer_phone:'+18095540122',province:'Distrito Nacional',shipping_method:'uber',shipping_cost:250,address:'Calle El Sol #12, Gazcue',pickup_point:'',specify:'',payment_method:'transfer_bpd',payment_status:'pagado',status:'entregado',subtotal:3100,discount:0,total:3350,due_date:dAgo(2),wa_sent_at:dAgo(2),proof:false,proofImage:'',items:[{pid:'AU-001',code:'AU-001',name:'Vestido Midi Plisado',variant:{Talla:'M',Color:'Verde Salvia'},qty:1,unit_price:2450,cost:1300,line_total:2450},{pid:'AU-006',code:'AU-006',name:'Aros Perla Natural',variant:{Color:'Perla'},qty:1,unit_price:650,cost:250,line_total:650}]},
+   {id:'o2',number:'RD-0002',created_at:dAgo(6),customer_name:'Lucas Vega',customer_phone:'+18098123456',province:'Santiago',shipping_method:'agencia',shipping_cost:350,address:'Punto Caribe Pack Santiago',pickup_point:'',specify:'',payment_method:'credito',payment_status:'pendiente',status:'enviado',subtotal:3450,discount:0,total:3800,due_date:dAgo(-24),wa_sent_at:dAgo(6),proof:false,proofImage:'',items:[{pid:'AU-011',code:'AU-011',name:'Botín Cuero Miel',variant:{Talla:'40',Color:'Miel'},qty:1,unit_price:3450,cost:1800,line_total:3450}]},
+   {id:'o3',number:'RD-0003',created_at:dAgo(1),customer_name:'Fernanda Ruiz',customer_phone:'+18493314567',province:'Distrito Nacional',shipping_method:'pickup',shipping_cost:0,address:'',pickup_point:'Tienda Aurora — Av. España #1212, Gazcue',specify:'',payment_method:'transfer_banreservas',payment_status:'pendiente',status:'pendiente',subtotal:4500,discount:0,total:4500,due_date:dAgo(1),wa_sent_at:dAgo(1),proof:false,proofImage:'',items:[{pid:'AU-008',code:'AU-008',name:'Bolso Tote Cuero',variant:{Color:'Marrón'},qty:2,unit_price:2250,cost:1100,line_total:4500}]}],
   payments:[{id:'pay1',order_id:'o1',amount:3350,method:'transfer_bpd',reference:'REF-1001',received_at:dAgo(1)}],
-  receipts:[{id:'r1',number:'R-0001',order_id:'o1',issued_at:dAgo(1)},{id:'r2',number:'R-0002',order_id:'o2',issued_at:dAgo(5)}],
+  receipts:[{id:'r1',number:'R-0001',order_id:'o1',issued_at:dAgo(1)}],
   reviews:[{pid:'AU-001',rating:5},{pid:'AU-008',rating:5},{pid:'AU-011',rating:4}],
   posts:[], abandoned:[] };
 }
@@ -121,7 +129,7 @@ var STORES=(function(){var r=LSget('cy2-stores');if(r){try{var s=JSON.parse(r);i
  return {'s-demo':DEMO_STORE()};})();
 function persistStores(){LSset('cy2-stores',JSON.stringify(STORES));}
 var DB=null;
-function loadSession(){var id=LSget('cy2-session');if(id&&STORES[id]){DB=STORES[id];return true;}DB=null;return false;}
+function loadSession(){var id=LSget('cy2-session');if(id&&STORES[id]){DB=STORES[id];ensureSettings();return true;}DB=null;return false;}
 function setSession(id){LSset('cy2-session',id);DB=STORES[id];cart=[];persistCart();}
 function logout(){LSdel('cy2-session');DB=null;cart=[];persistCart();renderCartBadge();show('auth');toast('Sesión cerrada','good');}
 function persist(){if(DB){STORES[DB.id]=DB;persistStores();}}
@@ -138,13 +146,13 @@ function fmt(n){return 'RD$ '+new Intl.NumberFormat('es-DO',{maximumFractionDigi
 function uid(){return Math.random().toString(36).slice(2,9);}
 function slug(s){return s.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'');}
 function findP(id){if(!DB)return null;for(var i=0;i<DB.products.length;i++)if(DB.products[i].id===id)return DB.products[i];return null;}
-function findO(id){for(var i=0;i<DB.orders.length;i++)if(DB.orders[i].id===id)return DB.orders[i];return null;}
+function findO(id){if(!DB)return null;for(var i=0;i<DB.orders.length;i++)if(DB.orders[i].id===id)return DB.orders[i];return null;}
 function zoneOf(pv){
  if(DB&&DB.settings&&DB.settings.provinces){for(var i=0;i<DB.settings.provinces.length;i++){if(DB.settings.provinces[i].n===pv)return DB.settings.provinces[i].z;}}
  var P=[['Distrito Nacional','ZONA_SD'],['Santo Domingo Este','ZONA_SD'],['Santo Domingo Oeste','ZONA_SD'],['Santo Domingo Norte','ZONA_SD'],['Santiago','ZONA_CIBAO'],['La Vega','ZONA_CIBAO'],['Puerto Plata','ZONA_CIBAO'],['Punta Cana','ZONA_ESTE'],['La Romana','ZONA_ESTE'],['San Pedro de Macorís','ZONA_ESTE'],['San Cristóbal','ZONA_SUR'],['Barahona','ZONA_SUR']];
  for(var j=0;j<P.length;j++)if(P[j][0]===pv)return P[j][1];
  return 'ZONA_SD';}
-function provinceOptions(){return ((DB&&DB.settings&&DB.settings.provinces)||[]).filter(function(p){return p.active;});}
+function provinceOptions(){ensureSettings();return ((DB&&DB.settings&&DB.settings.provinces)||[]).filter(function(p){return p.active;});}
 function fDate(iso){return new Date(iso).toLocaleDateString('es-DO',{day:'2-digit',month:'short'});}
 function fDT(iso){var d=new Date(iso);return d.toLocaleDateString('es-DO',{day:'2-digit',month:'2-digit',year:'numeric'})+' · '+d.toLocaleTimeString('es-DO',{hour:'numeric',minute:'2-digit'});}
 function stars(r){var f=Math.round(r);return '★★★★★'.slice(0,f)+'☆☆☆☆☆'.slice(0,5-f);}
@@ -477,6 +485,7 @@ function show(v){state.view=v;['auth','tienda','checkout','confirm','admin'].for
  if(v==='tienda')renderCatalog();window.scrollTo(0,0);}
 function goTienda(){show('tienda');}
 function shipOptions(){
+ ensureSettings();
  var z=zoneOf(state.co.province);
  return (DB.settings.shipping||[]).filter(function(m){
   if(!m.active)return false;
@@ -485,7 +494,7 @@ function shipOptions(){
   return m.zones.indexOf(z)!==-1;});}
 function pickProof(inp){if(!inp.files||!inp.files[0])return;
  fileToDataURL(inp.files[0],800,false,function(d){state.co.proofImage=d;renderCheckout();});}
-function renderCheckout(){var co=state.co;
+function renderCheckout(){ensureSettings();var co=state.co;
  $('#steps').innerHTML='<span class="stepdot '+(co.step>1?'done':'on')+'">1</span><span class="steplab">Entrega</span><span class="stepdot '+(co.step>1?'on':'')+'">2</span><span class="steplab">Pago</span>';
  if(co.step===1){
   var opts=shipOptions();
