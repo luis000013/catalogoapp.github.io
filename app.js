@@ -674,3 +674,36 @@ function renderConfirm(o){var pm=payLabel(o.payment_method),msg=waOrderMessage(o
   }else if(tries>60){clearInterval(t);}
  },250);
 })();
+/* ============ FIX CARRITO: versiones blindadas (anti pantalla en blanco) ============ */
+function cartCalc(){
+  var lines=[],sub=0;
+  cart.forEach(function(l){var p=findP(l.pid);if(!p)return;var lt=p.price*l.qty;sub+=lt;lines.push({l:l,p:p,lt:lt});});
+  var promo=(DB&&DB.settings&&DB.settings.promo)?DB.settings.promo:{min:Infinity,percent:0};
+  var disc=0;if(sub>=promo.min)disc=Math.round(sub*promo.percent/100);
+  return {lines:lines,subtotal:sub,discount:disc,net:sub-disc};
+}
+function renderCart(){
+  try{
+    if(DB) ensureSettings();
+    var hd=$('#cartHd'),bd=$('#cartBd'),ft=$('#cartFt');
+    if(!hd||!bd||!ft){ toast('Falta el cajón del carrito en index.html: actualiza index.html a v2.9','warn'); return; }
+    var c=cartCalc();
+    hd.innerHTML='<div style="display:flex;align-items:center"><b style="font-size:18px;font-weight:700;flex:1">Tu carrito</b><button class="icon-btn" onclick="closeCart()">'+ic('x',18)+'</button></div>';
+    if(!c.lines.length){ bd.innerHTML='<p style="text-align:center;color:var(--text2);padding:50px 0">Tu carrito está vacío.</p>'; ft.innerHTML=''; return; }
+    var rem=(DB.settings.free_threshold||0)-c.subtotal;
+    bd.innerHTML='<div style="font-size:13px;font-weight:700;color:'+(rem>0?'var(--amber)':'var(--ok)')+'">'+(rem>0?'🚚 Agrega '+fmt(rem)+' más para envío gratis':'🎉 ¡Envío gratis!')+'</div><div class="meter"><i style="width:'+Math.min(100,Math.round(c.subtotal/(DB.settings.free_threshold||1)*100))+'%"></i></div>'+
+    c.lines.map(function(x,i){return '<div class="cline">'+swHTML(x.p)+'<div class="row-main" style="min-width:100px"><b style="font-size:14px">'+esc(x.p.name)+'</b><small>'+esc(Object.keys(x.l.variant).map(function(k){return x.l.variant[k];}).join(' · '))+' · '+fmt(x.p.price)+'</small></div>'+
+     '<div class="stepper"><button onclick="setQty('+i+','+(x.l.qty-1)+')">−</button><span>'+x.l.qty+'</span><button onclick="setQty('+i+','+(x.l.qty+1)+')">+</button></div>'+
+     '<b style="min-width:66px;text-align:right;font-size:14px">'+fmt(x.lt)+'</b><button class="icon-btn" onclick="removeLine('+i+')">'+ic('trash',16)+'</button></div>';}).join('');
+    var dsc=c.discount>0?'<div style="display:flex;justify-content:space-between;font-size:13px;color:var(--ok);font-weight:700;margin-top:8px"><span>Promo ('+((DB.settings.promo&&DB.settings.promo.percent)||0)+'%)</span><span>−'+fmt(c.discount)+'</span></div>':'';
+    ft.innerHTML='<div style="display:flex;justify-content:space-between;font-size:13px;color:var(--text2)"><span>Subtotal</span><span>'+fmt(c.subtotal)+'</span></div>'+dsc+
+     '<div style="display:flex;justify-content:space-between;font-weight:800;font-size:18px;margin:8px 0 14px"><span>Total</span><span>'+fmt(c.net)+'</span></div>'+
+     '<button class="btn btn-wa" style="width:100%;margin-bottom:10px" onclick="confirmAvailability()">'+icWa(17)+'Confirmar disponibilidad del pedido</button>'+
+     '<button class="btn btn-primary" style="width:100%" onclick="openCheckout()">Continuar pedido →</button>';
+  }catch(e){ toast('Error al abrir el carrito: '+e.message,'warn'); }
+}
+function openCart(){
+  var bk=$('#cartBk'),dr=$('#cartDr');
+  if(!bk||!dr){ toast('Falta el cajón del carrito en index.html: actualiza index.html a v2.9','warn'); return; }
+  bk.className='bk show'; dr.className='drawer show'; renderCart();
+}
