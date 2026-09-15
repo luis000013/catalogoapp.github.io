@@ -1,4 +1,4 @@
-/* CatálogoYa v2.9 · app.js — núcleo público (rich preview + semáforo) */
+/* CatálogoYa v3.0 · app.js — todo integrado (directo a WhatsApp + rich preview + emojis seguros) */
 /* 1 ICONOS */
 var ICON={
  cart:'<circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/>',
@@ -32,8 +32,7 @@ var ICON={
  bell:'<path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/>',
  exit:'<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/>',
  eye:'<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>',
- copy:'<rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>'
-};
+ copy:'<rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>'};
 function ic(n,s){return '<svg width="'+(s||18)+'" height="'+(s||18)+'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'+ICON[n]+'</svg>';}
 function icWa(s){return '<svg width="'+(s||18)+'" height="'+(s||18)+'" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.52.149-.174.198-.298.297-.497.1-.198.05-.371-.025-.52-.074-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>';}
 function catIcon(c){return c==='Ropa'?'shirt':c==='Calzado'?'shoe':c==='Accesorios'?'bag':'box';}
@@ -94,7 +93,7 @@ function dAgo(n){var d=new Date();d.setDate(d.getDate()-n);return d.toISOString(
 function DEMO_STORE(){
  var st=DEFSettings(); st.insta='@auroraboutique';
  return { id:'s-demo', name:'Aurora Boutique RD', handle:'auroraboutique', email:'demo@aurora.do', passHash:hpass('aurora123'),
-  bio:'Moda femenina & accesorios premium ✨\n Santo Domingo · Envíos a todo el país\n🚚 Entrega 24-48h · Recogida en tienda\n💳 Transferencia · Contra entrega · Crédito\n👇 Haz tu pedido por el catálogo',
+  bio:'Moda femenina & accesorios premium ✨\nSanto Domingo · Envíos a todo el país\n🚚 Entrega 24-48h · Recogida en tienda\n💳 Transferencia · Contra entrega · Crédito\n👇 Haz tu pedido por el catálogo',
   logo:'', phone:'18095551234', seq:{order:3,receipt:2}, settings:st,
   products:[
    {id:'AU-001',code:'AU-001',subcat:'Vestidos',name:'Vestido Midi Plisado',cat:'Ropa',price:2450,cost:1300,stock:6,hue:150,image:'',desc:'Plisado fluido, corte midi.',sizes:['S','M','L'],colors:[{n:'Verde Salvia'},{n:'Negro'}]},
@@ -316,10 +315,14 @@ function drawAvailabilityCard(lines){
      ctx.restore();});
    resolve(c.toDataURL('image/jpeg',0.92));});});}
 function checkoutUrl(){return storeUrl()+'?t='+DB.handle+'&completar=1';}
+/* emojis seguros (no se corrompen al enviarse) */
+var EMO={ basket:String.fromCodePoint(0x1F9FA), point:String.fromCodePoint(0x1F449),
+          truck:String.fromCodePoint(0x1F69A), pin:String.fromCodePoint(0x1F4CD),
+          card:String.fromCodePoint(0x1F4B3), hour:String.fromCodePoint(0x23F3) };
 function availabilityCaption(c){
  return 'Consulta de disponibilidad — '+DB.name+
-  '\n🧺 Total estimado: '+fmt(c.net)+
-  '\n👉 Completa la compra aquí:'+
+  '\n'+EMO.basket+' Total estimado: '+fmt(c.net)+
+  '\n'+EMO.point+' Completa la compra aquí:'+
   '\n'+checkoutUrl()+
   '\n¡Quedo a la espera de su confirmación! Muchas gracias.';}
 function drawOrderCard(o){
@@ -376,13 +379,13 @@ function waOrderMessage(o){
  L.push('Envío ('+shipLabel(o.shipping_method).label.split(' (')[0]+'): '+(o.shipping_cost?fmt(o.shipping_cost):'GRATIS'));
  L.push('TOTAL A PAGAR: '+fmt(o.total));
  L.push('');
- L.push('🚚 Entrega: '+shipLabel(o.shipping_method).label+(o.specify?(' ('+o.specify+')'):''));
- L.push('📍 '+(o.shipping_method==='pickup'?o.pickup_point:o.address));
+ L.push(EMO.truck+' Entrega: '+shipLabel(o.shipping_method).label+(o.specify?(' ('+o.specify+')'):''));
+ L.push(EMO.pin+' '+(o.shipping_method==='pickup'?o.pickup_point:o.address));
  var pm=payLabel(o.payment_method);
- L.push('💳 Pago: '+pm.bank+(pm.type==='transfer'?' · '+pm.acct+' · Titular: '+pm.holder:''));
- L.push('⏳ Estado: Pendiente');
+ L.push(EMO.card+' Pago: '+pm.bank+(pm.type==='transfer'?' · '+pm.acct+' · Titular: '+pm.holder:''));
+ L.push(EMO.hour+' Estado: Pendiente');
  return L.join('\n');}
-/* ============ RICH PREVIEW (tarjeta horizontal + link OG) ============ */
+/* RICH PREVIEW: guarda la tarjeta en la tabla cards (sin bucket) */
 function drawOGCard(items, heading, totalText){
   return new Promise(function(resolve){
     Promise.all(items.map(function(it){var p=(it&&it.pid)?findP(it.pid):null;return prodVisual(p||{hue:200,image:''});})).then(function(visArr){
@@ -404,30 +407,19 @@ function drawOGCard(items, heading, totalText){
     });
   });
 }
-async function uploadCardImage(dataUrl, token){
-  try{
-    var blob=await (await fetch(dataUrl)).blob();
-    var path='cards/'+token+'.jpg';
-    var up=await sb.storage.from('cards').upload(path, blob, {contentType:'image/jpeg', upsert:true});
-    if(up.error) return null;
-    return sb.storage.from('cards').getPublicUrl(path).data.publicUrl;
-  }catch(e){ return null; }
-}
 async function prepareCardLink(items, heading, totalText, redirect){
   if(!SB_ON) return null;
   try{
-    var og=await drawOGCard(items, heading, totalText);
-    var token=uid()+uid();
-    var imgUrl=await uploadCardImage(og, token);
-    if(!imgUrl) return null;
-    await sb.from('cards').insert({token:token, title:heading, description:totalText, image_url:imgUrl, redirect_url:redirect||''});
-    var link=SB_URL+'/functions/v1/card/'+token;
+    var og = await drawOGCard(items, heading, totalText);
+    var token = uid()+uid();
+    await sb.from('cards').insert({ token:token, title:heading, description:totalText, image_b64:og, redirect_url:redirect||'' });
+    var link = SB_URL + '/functions/v1/card/' + token;
     fetch(link).catch(function(){});
-    fetch(imgUrl).catch(function(){});
+    fetch(link + '/img').catch(function(){});
     return link;
   }catch(e){ return null; }
 }
-/* ============ PÁGINA-SEMÁFORO (espera antes de WhatsApp) ============ */
+/* SEMÁFORO: espera 3-2-1 y luego va DIRECTO a WhatsApp si hay link */
 function openGate(portrait, buildText, phone, linkPromise){
   openModal(
    '<div style="text-align:center">'+
@@ -450,14 +442,17 @@ function openGate(portrait, buildText, phone, linkPromise){
   Promise.all([lp, minDelay]).then(function(resArr){
     var link=resArr[0];
     var st=document.getElementById('gateStatus');
-    if(st) st.textContent='✓ Tarjeta lista. Ya puedes enviar.';
+    if(st) st.textContent = link ? '✓ Tarjeta lista. Se abrirá WhatsApp directo.' : '✓ Listo (se adjuntará la tarjeta).';
     var b=document.getElementById('gateBtn');
     if(b){ b.disabled=false;
-      b.onclick=function(){ closeModal(); sendCardToWhatsApp(portrait, buildText(link), phone); };
+      b.onclick=function(){
+        closeModal();
+        if(link){ openWaText(buildText(link), phone); }
+        else{ sendCardToWhatsApp(portrait, buildText(null), phone); }
+      };
     }
   });
 }
-/* Consulta de disponibilidad → pasa por el semáforo */
 async function confirmAvailability(){
   if(!cart.length)return toast('Tu carrito está vacío','warn');
   var c=cartCalc();
@@ -470,7 +465,6 @@ async function confirmAvailability(){
   var buildText=function(link){ return availabilityCaption(c)+(link?('\n\n🔎 Ver los productos: '+link):''); };
   openGate(portrait, buildText, storePhone(), linkPromise);
 }
-/* Envío de pedido → pasa por el semáforo */
 async function sendOrderWA(id){
   var o=findO(id);if(!o)return;
   if(document.fonts&&document.fonts.ready){try{await document.fonts.ready;}catch(e){}}
@@ -674,36 +668,3 @@ function renderConfirm(o){var pm=payLabel(o.payment_method),msg=waOrderMessage(o
   }else if(tries>60){clearInterval(t);}
  },250);
 })();
-/* ============ FIX CARRITO: versiones blindadas (anti pantalla en blanco) ============ */
-function cartCalc(){
-  var lines=[],sub=0;
-  cart.forEach(function(l){var p=findP(l.pid);if(!p)return;var lt=p.price*l.qty;sub+=lt;lines.push({l:l,p:p,lt:lt});});
-  var promo=(DB&&DB.settings&&DB.settings.promo)?DB.settings.promo:{min:Infinity,percent:0};
-  var disc=0;if(sub>=promo.min)disc=Math.round(sub*promo.percent/100);
-  return {lines:lines,subtotal:sub,discount:disc,net:sub-disc};
-}
-function renderCart(){
-  try{
-    if(DB) ensureSettings();
-    var hd=$('#cartHd'),bd=$('#cartBd'),ft=$('#cartFt');
-    if(!hd||!bd||!ft){ toast('Falta el cajón del carrito en index.html: actualiza index.html a v2.9','warn'); return; }
-    var c=cartCalc();
-    hd.innerHTML='<div style="display:flex;align-items:center"><b style="font-size:18px;font-weight:700;flex:1">Tu carrito</b><button class="icon-btn" onclick="closeCart()">'+ic('x',18)+'</button></div>';
-    if(!c.lines.length){ bd.innerHTML='<p style="text-align:center;color:var(--text2);padding:50px 0">Tu carrito está vacío.</p>'; ft.innerHTML=''; return; }
-    var rem=(DB.settings.free_threshold||0)-c.subtotal;
-    bd.innerHTML='<div style="font-size:13px;font-weight:700;color:'+(rem>0?'var(--amber)':'var(--ok)')+'">'+(rem>0?'🚚 Agrega '+fmt(rem)+' más para envío gratis':'🎉 ¡Envío gratis!')+'</div><div class="meter"><i style="width:'+Math.min(100,Math.round(c.subtotal/(DB.settings.free_threshold||1)*100))+'%"></i></div>'+
-    c.lines.map(function(x,i){return '<div class="cline">'+swHTML(x.p)+'<div class="row-main" style="min-width:100px"><b style="font-size:14px">'+esc(x.p.name)+'</b><small>'+esc(Object.keys(x.l.variant).map(function(k){return x.l.variant[k];}).join(' · '))+' · '+fmt(x.p.price)+'</small></div>'+
-     '<div class="stepper"><button onclick="setQty('+i+','+(x.l.qty-1)+')">−</button><span>'+x.l.qty+'</span><button onclick="setQty('+i+','+(x.l.qty+1)+')">+</button></div>'+
-     '<b style="min-width:66px;text-align:right;font-size:14px">'+fmt(x.lt)+'</b><button class="icon-btn" onclick="removeLine('+i+')">'+ic('trash',16)+'</button></div>';}).join('');
-    var dsc=c.discount>0?'<div style="display:flex;justify-content:space-between;font-size:13px;color:var(--ok);font-weight:700;margin-top:8px"><span>Promo ('+((DB.settings.promo&&DB.settings.promo.percent)||0)+'%)</span><span>−'+fmt(c.discount)+'</span></div>':'';
-    ft.innerHTML='<div style="display:flex;justify-content:space-between;font-size:13px;color:var(--text2)"><span>Subtotal</span><span>'+fmt(c.subtotal)+'</span></div>'+dsc+
-     '<div style="display:flex;justify-content:space-between;font-weight:800;font-size:18px;margin:8px 0 14px"><span>Total</span><span>'+fmt(c.net)+'</span></div>'+
-     '<button class="btn btn-wa" style="width:100%;margin-bottom:10px" onclick="confirmAvailability()">'+icWa(17)+'Confirmar disponibilidad del pedido</button>'+
-     '<button class="btn btn-primary" style="width:100%" onclick="openCheckout()">Continuar pedido →</button>';
-  }catch(e){ toast('Error al abrir el carrito: '+e.message,'warn'); }
-}
-function openCart(){
-  var bk=$('#cartBk'),dr=$('#cartDr');
-  if(!bk||!dr){ toast('Falta el cajón del carrito en index.html: actualiza index.html a v2.9','warn'); return; }
-  bk.className='bk show'; dr.className='drawer show'; renderCart();
-}
