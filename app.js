@@ -1,4 +1,4 @@
-/* CatálogoYa v2.8 · app.js — núcleo público */
+/* CatálogoYa v2.9 · app.js — núcleo público (rich preview + semáforo) */
 /* 1 ICONOS */
 var ICON={
  cart:'<circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/>',
@@ -77,7 +77,6 @@ function DEFSettings(){return {free_threshold:5000,low_stock:3,promo:{min:3000,p
   {id:'cod',type:'cod',bank:'Efectivo contra entrega',enabled:true},
   {id:'card_azul',type:'card',bank:'Tarjeta Crédito/Débito (Azul)',enabled:true},
   {id:'credito',type:'credit',bank:'A crédito (30 días)',enabled:true}]};}
-/* v2.8: completa settings antiguos para que Config y selects no queden vacíos */
 function ensureSettings(){
  if(!DB)return;
  var d=DEFSettings(); var s=DB.settings=DB.settings||{};
@@ -95,7 +94,7 @@ function dAgo(n){var d=new Date();d.setDate(d.getDate()-n);return d.toISOString(
 function DEMO_STORE(){
  var st=DEFSettings(); st.insta='@auroraboutique';
  return { id:'s-demo', name:'Aurora Boutique RD', handle:'auroraboutique', email:'demo@aurora.do', passHash:hpass('aurora123'),
-  bio:'Moda femenina & accesorios premium ✨\n📍 Santo Domingo · Envíos a todo el país\n🚚 Entrega 24-48h · Recogida en tienda\n💳 Transferencia · Contra entrega · Crédito\n👇 Haz tu pedido por el catálogo',
+  bio:'Moda femenina & accesorios premium ✨\n Santo Domingo · Envíos a todo el país\n🚚 Entrega 24-48h · Recogida en tienda\n💳 Transferencia · Contra entrega · Crédito\n👇 Haz tu pedido por el catálogo',
   logo:'', phone:'18095551234', seq:{order:3,receipt:2}, settings:st,
   products:[
    {id:'AU-001',code:'AU-001',subcat:'Vestidos',name:'Vestido Midi Plisado',cat:'Ropa',price:2450,cost:1300,stock:6,hue:150,image:'',desc:'Plisado fluido, corte midi.',sizes:['S','M','L'],colors:[{n:'Verde Salvia'},{n:'Negro'}]},
@@ -323,13 +322,6 @@ function availabilityCaption(c){
   '\n👉 Completa la compra aquí:'+
   '\n'+checkoutUrl()+
   '\n¡Quedo a la espera de su confirmación! Muchas gracias.';}
-async function confirmAvailability(){
- if(!cart.length)return toast('Tu carrito está vacío','warn');
- var c=cartCalc();
- toast('Generando tarjeta de consulta…','good');
- if(document.fonts&&document.fonts.ready){try{await document.fonts.ready;}catch(e){}}
- var data=await drawAvailabilityCard(c.lines);
- sendCardToWhatsApp(data,availabilityCaption(c),storePhone());}
 function drawOrderCard(o){
  return new Promise(function(resolve){
   var visP=Promise.all(o.items.map(function(it){var p=findP(it.pid);return prodVisual(p||{hue:200,image:''});}));
@@ -390,29 +382,107 @@ function waOrderMessage(o){
  L.push('💳 Pago: '+pm.bank+(pm.type==='transfer'?' · '+pm.acct+' · Titular: '+pm.holder:''));
  L.push('⏳ Estado: Pendiente');
  return L.join('\n');}
+/* ============ RICH PREVIEW (tarjeta horizontal + link OG) ============ */
+function drawOGCard(items, heading, totalText){
+  return new Promise(function(resolve){
+    Promise.all(items.map(function(it){var p=(it&&it.pid)?findP(it.pid):null;return prodVisual(p||{hue:200,image:''});})).then(function(visArr){
+      var W=1200,H=630,F='Inter, Arial, sans-serif';
+      var c=document.createElement('canvas');c.width=W;c.height=H;var ctx=c.getContext('2d');
+      ctx.fillStyle='#0e453a';ctx.fillRect(0,0,W,H);
+      ctx.textBaseline='top';
+      ctx.fillStyle='#f4f6f4';ctx.font='800 54px '+F;
+      var hl=wrapText(ctx,heading,W-620);hl.slice(0,2).forEach(function(l,i){ctx.fillText(l,60,70+i*60);});
+      ctx.fillStyle='#c9d5ce';ctx.font='400 32px '+F;ctx.fillText(totalText,60,210);
+      var n=Math.min(4,visArr.length),size=190,gap=18,x0=640,y0=80;
+      for(var i=0;i<n;i++){var col=i%2,row=Math.floor(i/2);var x=x0+col*(size+gap),y=y0+row*(size+gap);var v=visArr[i];
+        ctx.save();ctx.beginPath();ctx.rect(x,y,size,size);ctx.clip();
+        ctx.fillStyle=v.bg;ctx.fillRect(x,y,size,size);
+        if(v.img)drawContain(ctx,v.img,x,y,size,size);
+        ctx.restore();}
+      ctx.fillStyle='#aec0b6';ctx.font='400 26px '+F;ctx.fillText('CatálogoYa · vista del pedido',60,560);
+      resolve(c.toDataURL('image/jpeg',0.9));
+    });
+  });
+}
+async function uploadCardImage(dataUrl, token){
+  try{
+    var blob=await (await fetch(dataUrl)).blob();
+    var path='cards/'+token+'.jpg';
+    var up=await sb.storage.from('cards').upload(path, blob, {contentType:'image/jpeg', upsert:true});
+    if(up.error) return null;
+    return sb.storage.from('cards').getPublicUrl(path).data.publicUrl;
+  }catch(e){ return null; }
+}
+async function prepareCardLink(items, heading, totalText, redirect){
+  if(!SB_ON) return null;
+  try{
+    var og=await drawOGCard(items, heading, totalText);
+    var token=uid()+uid();
+    var imgUrl=await uploadCardImage(og, token);
+    if(!imgUrl) return null;
+    await sb.from('cards').insert({token:token, title:heading, description:totalText, image_url:imgUrl, redirect_url:redirect||''});
+    var link=SB_URL+'/functions/v1/card/'+token;
+    fetch(link).catch(function(){});
+    fetch(imgUrl).catch(function(){});
+    return link;
+  }catch(e){ return null; }
+}
+/* ============ PÁGINA-SEMÁFORO (espera antes de WhatsApp) ============ */
+function openGate(portrait, buildText, phone, linkPromise){
+  openModal(
+   '<div style="text-align:center">'+
+   '<h3 style="font-size:18px;font-weight:800">Preparando tu tarjeta…</h3>'+
+   '<img src="'+portrait+'" style="width:100%;border-radius:16px;margin:12px 0">'+
+   '<div id="gateCount" style="font-size:46px;font-weight:900;line-height:1">3</div>'+
+   '<p id="gateStatus" style="color:var(--text2);font-size:13px;margin-top:6px">Calentando el enlace para la vista previa…</p>'+
+   '<button id="gateBtn" class="btn btn-wa" disabled style="width:100%;margin-top:14px">'+icWa(18)+'Ir a WhatsApp y enviar</button>'+
+   '<p style="font-size:12px;color:var(--text2);margin-top:10px">Cuando se abra WhatsApp, espera a ver la fotito antes de darle Enviar.</p>'+
+   '</div>');
+  var count=3;
+  var ci=setInterval(function(){
+    count--;
+    var el=document.getElementById('gateCount');
+    if(el) el.textContent = count>0 ? String(count) : '✓';
+    if(count<=0) clearInterval(ci);
+  },1000);
+  var minDelay=new Promise(function(res){setTimeout(res,3000);});
+  var lp = linkPromise || Promise.resolve(null);
+  Promise.all([lp, minDelay]).then(function(resArr){
+    var link=resArr[0];
+    var st=document.getElementById('gateStatus');
+    if(st) st.textContent='✓ Tarjeta lista. Ya puedes enviar.';
+    var b=document.getElementById('gateBtn');
+    if(b){ b.disabled=false;
+      b.onclick=function(){ closeModal(); sendCardToWhatsApp(portrait, buildText(link), phone); };
+    }
+  });
+}
+/* Consulta de disponibilidad → pasa por el semáforo */
+async function confirmAvailability(){
+  if(!cart.length)return toast('Tu carrito está vacío','warn');
+  var c=cartCalc();
+  toast('Generando tarjeta…','good');
+  if(document.fonts&&document.fonts.ready){try{await document.fonts.ready;}catch(e){}}
+  var portrait=await drawAvailabilityCard(c.lines);
+  var linkPromise=(SB_ON && typeof prepareCardLink==='function')
+     ? prepareCardLink(c.lines, 'Consulta de disponibilidad — '+DB.name, c.lines.length+' artículos · Total estimado '+fmt(c.net), storeUrl()+'?t='+DB.handle)
+     : null;
+  var buildText=function(link){ return availabilityCaption(c)+(link?('\n\n🔎 Ver los productos: '+link):''); };
+  openGate(portrait, buildText, storePhone(), linkPromise);
+}
+/* Envío de pedido → pasa por el semáforo */
 async function sendOrderWA(id){
- var o=findO(id);if(!o)return;
- if(document.fonts&&document.fonts.ready){try{await document.fonts.ready;}catch(e){}}
- var data=await drawOrderCard(o);
- sendCardToWhatsApp(data,waOrderMessage(o),storePhone());
- markWaSent(id);}
-function renderCart(){var c=cartCalc();
- $('#cartHd').innerHTML='<div style="display:flex;align-items:center"><b style="font-size:18px;font-weight:700;flex:1">Tu carrito</b><button class="icon-btn" onclick="closeCart()">'+ic('x',18)+'</button></div>';
- if(!c.lines.length){$('#cartBd').innerHTML='<p style="text-align:center;color:var(--text2);padding:50px 0">Tu carrito está vacío.</p>';$('#cartFt').innerHTML='';return;}
- var rem=DB.settings.free_threshold-c.subtotal;
- $('#cartBd').innerHTML='<div style="font-size:13px;font-weight:700;color:'+(rem>0?'var(--amber)':'var(--ok)')+'">'+(rem>0?'🚚 Agrega '+fmt(rem)+' más para envío gratis en Santo Domingo':'🎉 ¡Envío gratis en Santo Domingo!')+'</div><div class="meter"><i style="width:'+Math.min(100,Math.round(c.subtotal/DB.settings.free_threshold*100))+'%"></i></div>'+
- c.lines.map(function(x,i){return '<div class="cline">'+swHTML(x.p)+'<div class="row-main" style="min-width:100px"><b style="font-size:14px">'+esc(x.p.name)+'</b><small>'+esc(Object.keys(x.l.variant).map(function(k){return x.l.variant[k];}).join(' · '))+' · '+fmt(x.p.price)+'</small></div>'+
-  '<div class="stepper"><button onclick="setQty('+i+','+(x.l.qty-1)+')">−</button><span>'+x.l.qty+'</span><button onclick="setQty('+i+','+(x.l.qty+1)+')">+</button></div>'+
-  '<b style="min-width:66px;text-align:right;font-size:14px">'+fmt(x.lt)+'</b><button class="icon-btn" onclick="removeLine('+i+')">'+ic('trash',16)+'</button></div>';}).join('');
- var dsc=c.discount>0?'<div style="display:flex;justify-content:space-between;font-size:13px;color:var(--ok);font-weight:700;margin-top:8px"><span>Promo ('+DB.settings.promo.percent+'%)</span><span>−'+fmt(c.discount)+'</span></div>':'';
- $('#cartFt').innerHTML='<div style="display:flex;justify-content:space-between;font-size:13px;color:var(--text2)"><span>Subtotal</span><span>'+fmt(c.subtotal)+'</span></div>'+dsc+
-  '<div style="display:flex;justify-content:space-between;font-weight:800;font-size:18px;margin:8px 0 14px"><span>Total</span><span>'+fmt(c.net)+'</span></div>'+
-  '<button class="btn btn-wa" style="width:100%;margin-bottom:10px" onclick="confirmAvailability()">'+icWa(17)+'Confirmar disponibilidad del pedido</button>'+
-  '<button class="btn btn-primary" style="width:100%" onclick="openCheckout()">Continuar pedido →</button>';}
-function setQty(i,q){if(q<=0){removeLine(i);return;}var p=findP(cart[i].pid);cart[i].qty=Math.min(p?p.stock:99,q);persistCart();renderCartBadge();renderCart();}
-var lastRemoved=null;
-function removeLine(i){lastRemoved={line:cart[i],i:i};cart.splice(i,1);persistCart();renderCartBadge();renderCart();
- toast('Artículo removido','warn','DESHACER',function(){cart.splice(lastRemoved.i,0,lastRemoved.line);persistCart();renderCartBadge();renderCart();});}
+  var o=findO(id);if(!o)return;
+  if(document.fonts&&document.fonts.ready){try{await document.fonts.ready;}catch(e){}}
+  var portrait=await drawOrderCard(o);
+  var linkPromise=(SB_ON && typeof prepareCardLink==='function')
+     ? prepareCardLink(o.items, 'Pedido #'+o.number+' — '+DB.name, o.items.length+' artículos · Total '+fmt(o.total), storeUrl()+'?t='+DB.handle)
+     : null;
+  var buildText=function(link){ if(link){o.card_url=link; persist();} return waOrderMessage(o)+(link?('\n\n🔎 Ver los productos: '+link):''); };
+  openGate(portrait, buildText, storePhone(), linkPromise);
+  markWaSent(id);
+}
+function markWaSent(id){var o=findO(id);if(o&&!o.wa_sent_at){o.wa_sent_at=new Date().toISOString();persist();toast('Pedido transmitido al vendedor ✔','good');}}
 /* 7 CATALOGO */
 function cats(){var seen={},out=['Todo'];DB.products.forEach(function(p){if(!seen[p.cat]){seen[p.cat]=1;out.push(p.cat);}});return out;}
 function renderStoreHead(){
@@ -585,7 +655,7 @@ function renderConfirm(o){var pm=payLabel(o.payment_method),msg=waOrderMessage(o
   '<h1 style="font-size:38px;font-weight:900;margin:12px 0 6px;letter-spacing:-.02em">#'+o.number+'</h1>'+
   '<p style="color:var(--text2);font-size:15px">Total '+fmt(o.total)+' · '+esc(pm.bank)+'</p>'+
   '<div style="margin:16px 0"><button class="btn btn-wa" style="width:100%" onclick="sendOrderWA(\''+o.id+'\')">'+icWa(18)+'Enviar pedido por WhatsApp</button></div>'+
-  '<p style="font-size:13px;color:var(--text2)">En móvil se abre el compartir con la tarjeta y el texto juntos: elige WhatsApp y el chat de la tienda. En PC se abre el chat directo y la tarjeta queda copiada para pegar.</p></div>'+
+  '<p style="font-size:13px;color:var(--text2)">Verás la pantalla-semáforo: espera a que diga ✓ y luego pulsa el botón para ir a WhatsApp.</p></div>'+
   (pm.type==='transfer'?'<div class="conf-card"><b style="font-size:17px;font-weight:700">Datos para tu transferencia</b><div style="margin-top:12px">'+
    banks.map(function(b){return '<div class="bankline"><b>'+esc(b.bank)+'</b> '+esc(b.acct)+' · '+esc(b.holder)+'<button onclick="copyText(\''+esc(b.bank+' '+b.acct+' '+b.holder)+'\')">COPIAR</button></div>';}).join('')+'</div>':'')+
   (o.proofImage?'<div class="conf-card"><b style="font-size:15px;font-weight:700">📎 Comprobante adjunto</b><div style="margin-top:8px"><img src="'+o.proofImage+'" style="width:72px;height:72px;object-fit:cover;border-radius:12px"></div></div>':'')+
@@ -593,7 +663,6 @@ function renderConfirm(o){var pm=payLabel(o.payment_method),msg=waOrderMessage(o
   '<div style="margin-top:14px;display:flex;gap:10px;flex-wrap:wrap"><button class="btn btn-outline" onclick="copyText(decodeURIComponent(\''+encodeURIComponent(msg)+'\'))">'+ic('copy',16)+'Copiar texto</button>'+
   '<a class="btn btn-outline" href="https://wa.me/'+storePhone()+'?text='+encodeURIComponent('Hola, consulta sobre mi pedido #'+o.number)+'" target="_blank" rel="noopener noreferrer">'+icWa(16)+'Soporte</a>'+
   '<button class="btn btn-primary" onclick="goTienda()">Seguir comprando</button></div></div>';}
-function markWaSent(id){var o=findO(id);if(o&&!o.wa_sent_at){o.wa_sent_at=new Date().toISOString();persist();toast('Pedido transmitido al vendedor ✔','good');}}
 /* 9 DEEP-LINK */
 (function(){
  if(window.location.search.indexOf('completar=')===-1)return;
