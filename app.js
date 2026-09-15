@@ -1,7 +1,4 @@
-/* CatálogoYa v3.2 · app.js — VERSIÓN CANÓNICA COMPLETA
-   (integra todo: catálogo, carrito, checkout, tarjetas, rich-link, semáforo)
-   Incluye renderCart() y shareFiles() que faltaban en v3.1.
-   De aquí en adelante, cualquier cambio futuro se hace regenerando este archivo completo. */
+/* CatálogoYa v3.0 · app.js — núcleo público (rich preview + semáforo + 1 solo enlace) */
 /* 1 ICONOS */
 var ICON={
  cart:'<circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/>',
@@ -40,6 +37,11 @@ function ic(n,s){return '<svg width="'+(s||18)+'" height="'+(s||18)+'" viewBox="
 function icWa(s){return '<svg width="'+(s||18)+'" height="'+(s||18)+'" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.52.149-.174.198-.298.297-.497.1-.198.05-.371-.025-.52-.074-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>';}
 function catIcon(c){return c==='Ropa'?'shirt':c==='Calzado'?'shoe':c==='Accesorios'?'bag':'box';}
 var SUBCATS={Ropa:['Camisas','Pantalones','Vestidos','Chaquetas','Faldas'],Accesorios:['Aros','Bolsos','Pañuelos','Collares'],Calzado:['Sandalias','Botines','Sneakers','Tacón'],General:['Otros']};
+/* emojis seguros (no se corrompen al guardar) */
+var EMO={ basket:String.fromCodePoint(0x1F9FA), point:String.fromCodePoint(0x1F449),
+          truck:String.fromCodePoint(0x1F69A), pin:String.fromCodePoint(0x1F4CD),
+          card:String.fromCodePoint(0x1F4B3), hour:String.fromCodePoint(0x23F3),
+          mag:String.fromCodePoint(0x1F50E) };
 /* 2 TEMA */
 function curTheme(){return document.documentElement.getAttribute('data-theme')||'light';}
 function toggleTheme(){applyTheme(curTheme()==='dark'?'light':'dark');}
@@ -71,7 +73,7 @@ function DEFSettings(){return {free_threshold:5000,low_stock:3,promo:{min:3000,p
   {n:'Puerto Plata',z:'ZONA_CIBAO',active:true},{n:'Punta Cana',z:'ZONA_ESTE',active:true},
   {n:'La Romana',z:'ZONA_ESTE',active:true},{n:'San Pedro de Macorís',z:'ZONA_ESTE',active:true},
   {n:'San Cristóbal',z:'ZONA_SUR',active:true},{n:'Barahona',z:'ZONA_SUR',active:true}],
- pickup_points:[{city:'Distrito Nacional',label:'Tienda — Av. España #1212, Gazcue',hours:'Lun–Sáb 9am–6pm'},{city:'Santiago',label:'Punto — Calle Del Sol #45',hours:'Lun–Vie 10am–5pm'}],
+ pickup_points:[{city:'Distrito Nacional',label:'Tienda Aurora — Av. España #1212, Gazcue',hours:'Lun–Sáb 9am–6pm'},{city:'Santiago',label:'Punto Aurora — Calle Del Sol #45',hours:'Lun–Vie 10am–5pm'}],
  payments:[{id:'transfer_bpd',type:'transfer',bank:'Banco Popular Dominicano',acct:'Ahorros 796-21458-7',holder:'Aurora Boutique SRL',enabled:true},
   {id:'transfer_banreservas',type:'transfer',bank:'Banreservas',acct:'Corriente 001-55875-9',holder:'Aurora Boutique SRL',enabled:true},
   {id:'transfer_bhd',type:'transfer',bank:'Banco BHD',acct:'Ahorros 2210-4458-6',holder:'Aurora Boutique SRL',enabled:true},
@@ -96,24 +98,34 @@ function dAgo(n){var d=new Date();d.setDate(d.getDate()-n);return d.toISOString(
 function DEMO_STORE(){
  var st=DEFSettings(); st.insta='@auroraboutique';
  return { id:'s-demo', name:'Aurora Boutique RD', handle:'auroraboutique', email:'demo@aurora.do', passHash:hpass('aurora123'),
-  bio:'Moda femenina & accesorios premium ✨\nSanto Domingo · Envíos a todo el país\n🚚 Entrega 24-48h · Recogida en tienda\n👇 Haz tu pedido por el catálogo',
-  logo:'', phone:'18095551234', seq:{order:2,receipt:1}, settings:st,
+  bio:'Moda femenina & accesorios premium ✨\n Santo Domingo · Envíos a todo el país\n🚚 Entrega 24-48h · Recogida en tienda\n💳 Transferencia · Contra entrega · Crédito\n👇 Haz tu pedido por el catálogo',
+  logo:'', phone:'18095551234', seq:{order:3,receipt:2}, settings:st,
   products:[
-   {id:'AU-001',code:'AU-001',subcat:'Vestidos',name:'Vestido Midi Plisado',cat:'Ropa',price:2450,cost:1300,stock:6,hue:150,image:'',desc:'Plisado fluido.',sizes:['S','M','L'],colors:[{n:'Verde Salvia'},{n:'Negro'}]},
-   {id:'AU-002',code:'AU-002',subcat:'Camisas',name:'Blusa Lino Blanca',cat:'Ropa',price:1450,cost:700,stock:8,hue:40,image:'',desc:'Lino fresco.',sizes:['S','M','L'],colors:[{n:'Blanco'},{n:'Beige'}]},
-   {id:'AU-006',code:'AU-006',subcat:'Aros',name:'Aros Perla Natural',cat:'Accesorios',price:650,cost:250,stock:15,hue:200,image:'',desc:'Perla natural.',sizes:[],colors:[{n:'Perla'}]},
-   {id:'AU-008',code:'AU-008',subcat:'Bolsos',name:'Bolso Tote Cuero',cat:'Accesorios',price:2250,cost:1100,stock:5,hue:25,image:'',desc:'Cuero legítimo.',sizes:[],colors:[{n:'Marrón'},{n:'Negro'}]},
-   {id:'AU-011',code:'AU-011',subcat:'Botines',name:'Botín Cuero Miel',cat:'Calzado',price:3450,cost:1800,stock:3,hue:30,image:'',desc:'Cuero miel.',sizes:['36','37','38','39','40'],colors:[{n:'Miel'}]},
-   {id:'AU-005',code:'AU-005',subcat:'Faldas',name:'Falda Satinada Oro',cat:'Ropa',price:1650,cost:800,stock:0,hue:45,image:'',desc:'Satén brillante.',sizes:['S','M'],colors:[{n:'Oro'}]}],
+   {id:'AU-001',code:'AU-001',subcat:'Vestidos',name:'Vestido Midi Plisado',cat:'Ropa',price:2450,cost:1300,stock:6,hue:150,image:'',desc:'Plisado fluido, corte midi.',sizes:['S','M','L'],colors:[{n:'Verde Salvia'},{n:'Negro'}]},
+   {id:'AU-002',code:'AU-002',subcat:'Camisas',name:'Blusa Lino Blanca',cat:'Ropa',price:1450,cost:700,stock:8,hue:40,image:'',desc:'Lino fresco, manga corta.',sizes:['S','M','L'],colors:[{n:'Blanco'},{n:'Beige'}]},
+   {id:'AU-003',code:'AU-003',subcat:'Pantalones',name:'Pantalón Palazzo Negro',cat:'Ropa',price:1850,cost:900,stock:4,hue:240,image:'',desc:'Tiro alto, pierna amplia.',sizes:['34','36','38'],colors:[{n:'Negro'}]},
+   {id:'AU-004',code:'AU-004',subcat:'Chaquetas',name:'Chaqueta Denim Clásica',cat:'Ropa',price:2650,cost:1400,stock:3,hue:215,image:'',desc:'Denim rígido, corte recto.',sizes:['S','M','L'],colors:[{n:'Azul'}]},
+   {id:'AU-005',code:'AU-005',subcat:'Faldas',name:'Falda Satinada Oro',cat:'Ropa',price:1650,cost:800,stock:0,hue:45,image:'',desc:'Satén brillante, corte sesgo.',sizes:['S','M'],colors:[{n:'Oro'}]},
+   {id:'AU-006',code:'AU-006',subcat:'Aros',name:'Aros Perla Natural',cat:'Accesorios',price:650,cost:250,stock:15,hue:200,image:'',desc:'Perla natural, cierre plata.',sizes:[],colors:[{n:'Perla'}]},
+   {id:'AU-007',code:'AU-007',subcat:'Collares',name:'Collar Capa Dorada',cat:'Accesorios',price:950,cost:400,stock:10,hue:48,image:'',desc:'Baño de oro, cadena larga.',sizes:[],colors:[{n:'Dorado'}]},
+   {id:'AU-008',code:'AU-008',subcat:'Bolsos',name:'Bolso Tote Cuero',cat:'Accesorios',price:2250,cost:1100,stock:5,hue:25,image:'',desc:'Cuero legítimo, asa larga.',sizes:[],colors:[{n:'Marrón'},{n:'Negro'}]},
+   {id:'AU-009',code:'AU-009',subcat:'Pañuelos',name:'Pañuelo Seda Floral',cat:'Accesorios',price:750,cost:300,stock:2,hue:330,image:'',desc:'Seda estampada 70x70.',sizes:[],colors:[{n:'Floral'}]},
+   {id:'AU-010',code:'AU-010',subcat:'Sandalias',name:'Sandalia Plana Trenzada',cat:'Calzado',price:1550,cost:750,stock:7,hue:35,image:'',desc:'Trenzado a mano, suela plana.',sizes:['36','37','38','39'],colors:[{n:'Natural'}]},
+   {id:'AU-011',code:'AU-011',subcat:'Botines',name:'Botín Cuero Miel',cat:'Calzado',price:3450,cost:1800,stock:3,hue:30,image:'',desc:'Cuero miel, cierre lateral.',sizes:['36','37','38','39','40'],colors:[{n:'Miel'}]},
+   {id:'AU-012',code:'AU-012',subcat:'Sneakers',name:'Sneaker Urbano Blanco',cat:'Calzado',price:2850,cost:1500,stock:6,hue:0,image:'',desc:'Suela chunky, cuero blanco.',sizes:['36','37','38','39','40'],colors:[{n:'Blanco'}]},
+   {id:'AU-013',code:'AU-013',subcat:'Vestidos',name:'Vestido Noche Verde',cat:'Ropa',price:3250,cost:1700,stock:4,hue:140,image:'',desc:'Escote V, caída pesada.',sizes:['S','M','L'],colors:[{n:'Verde'}]},
+   {id:'AU-014',code:'AU-014',subcat:'Camisas',name:'Camisa Oversize Raya',cat:'Ropa',price:1650,cost:800,stock:0,hue:210,image:'',desc:'Oversize, raya diplomática.',sizes:['S','M','L'],colors:[{n:'Raya'}]}],
   customers:[
-   {id:'c1',name:'Camila Rojas',wa:'18095540122',status:'enviado',notes:'Clienta frecuente.',credit:false},
-   {id:'c2',name:'Lucas Vega',wa:'18098123456',status:'entregado',notes:'Saldo pendiente RD-0002.',credit:true}],
+   {id:'c1',name:'Camila Rojas',wa:'18095540122',status:'enviado',notes:'Clienta frecuente; tonos neutros.',credit:false},
+   {id:'c2',name:'Fernanda Ruiz',wa:'18493314567',status:'entregado',notes:'Mayorista: bolsos y pañuelos.',credit:true},
+   {id:'c3',name:'Lucas Vega',wa:'18098123456',status:'entregado',notes:'Pedido RD-0002 pendiente de saldo.',credit:false}],
   orders:[
-   {id:'o1',number:'RD-0001',created_at:dAgo(2),customer_name:'Camila Rojas',customer_phone:'+18095540122',province:'Distrito Nacional',shipping_method:'uber',shipping_cost:250,address:'Calle El Sol #12',pickup_point:'',specify:'',payment_method:'transfer_bpd',payment_status:'pagado',status:'entregado',subtotal:3100,discount:0,total:3350,due_date:dAgo(2),wa_sent_at:dAgo(2),proof:false,proofImage:'',items:[{pid:'AU-001',code:'AU-001',name:'Vestido Midi Plisado',variant:{Talla:'M',Color:'Verde Salvia'},qty:1,unit_price:2450,cost:1300,line_total:2450},{pid:'AU-006',code:'AU-006',name:'Aros Perla Natural',variant:{Color:'Perla'},qty:1,unit_price:650,cost:250,line_total:650}]},
-   {id:'o2',number:'RD-0002',created_at:dAgo(6),customer_name:'Lucas Vega',customer_phone:'+18098123456',province:'Santiago',shipping_method:'agencia',shipping_cost:350,address:'Punto Caribe Pack',pickup_point:'',specify:'',payment_method:'credito',payment_status:'pendiente',status:'enviado',subtotal:3450,discount:0,total:3800,due_date:dAgo(-24),wa_sent_at:dAgo(6),proof:false,proofImage:'',items:[{pid:'AU-011',code:'AU-011',name:'Botín Cuero Miel',variant:{Talla:'40',Color:'Miel'},qty:1,unit_price:3450,cost:1800,line_total:3450}]}],
+   {id:'o1',number:'RD-0001',created_at:dAgo(2),customer_name:'Camila Rojas',customer_phone:'+18095540122',province:'Distrito Nacional',shipping_method:'uber',shipping_cost:250,address:'Calle El Sol #12, Gazcue',pickup_point:'',specify:'',payment_method:'transfer_bpd',payment_status:'pagado',status:'entregado',subtotal:3100,discount:0,total:3350,due_date:dAgo(2),wa_sent_at:dAgo(2),proof:false,proofImage:'',items:[{pid:'AU-001',code:'AU-001',name:'Vestido Midi Plisado',variant:{Talla:'M',Color:'Verde Salvia'},qty:1,unit_price:2450,cost:1300,line_total:2450},{pid:'AU-006',code:'AU-006',name:'Aros Perla Natural',variant:{Color:'Perla'},qty:1,unit_price:650,cost:250,line_total:650}]},
+   {id:'o2',number:'RD-0002',created_at:dAgo(6),customer_name:'Lucas Vega',customer_phone:'+18098123456',province:'Santiago',shipping_method:'agencia',shipping_cost:350,address:'Punto Caribe Pack Santiago',pickup_point:'',specify:'',payment_method:'credito',payment_status:'pendiente',status:'enviado',subtotal:3450,discount:0,total:3800,due_date:dAgo(-24),wa_sent_at:dAgo(6),proof:false,proofImage:'',items:[{pid:'AU-011',code:'AU-011',name:'Botín Cuero Miel',variant:{Talla:'40',Color:'Miel'},qty:1,unit_price:3450,cost:1800,line_total:3450}]},
+   {id:'o3',number:'RD-0003',created_at:dAgo(1),customer_name:'Fernanda Ruiz',customer_phone:'+18493314567',province:'Distrito Nacional',shipping_method:'pickup',shipping_cost:0,address:'',pickup_point:'Tienda Aurora — Av. España #1212, Gazcue',specify:'',payment_method:'transfer_banreservas',payment_status:'pendiente',status:'pendiente',subtotal:4500,discount:0,total:4500,due_date:dAgo(1),wa_sent_at:dAgo(1),proof:false,proofImage:'',items:[{pid:'AU-008',code:'AU-008',name:'Bolso Tote Cuero',variant:{Color:'Marrón'},qty:2,unit_price:2250,cost:1100,line_total:4500}]}],
   payments:[{id:'pay1',order_id:'o1',amount:3350,method:'transfer_bpd',reference:'REF-1001',received_at:dAgo(1)}],
   receipts:[{id:'r1',number:'R-0001',order_id:'o1',issued_at:dAgo(1)}],
-  reviews:[{pid:'AU-001',rating:5},{pid:'AU-008',rating:5}],
+  reviews:[{pid:'AU-001',rating:5},{pid:'AU-008',rating:5},{pid:'AU-011',rating:4}],
   posts:[], abandoned:[] };
 }
 var STORES=(function(){var r=LSget('cy2-stores');if(r){try{var s=JSON.parse(r);if(s&&typeof s==='object')return s;}catch(e){}}
@@ -169,20 +181,25 @@ function shareStore(){var u=storeUrl()+'?t='+DB.handle;
 function openWaText(text,phone){window.open('https://wa.me/'+(phone||storePhone())+'?text='+encodeURIComponent(text),'_blank');}
 function copyText(t){function fb(){var ta=document.createElement('textarea');ta.value=t;document.body.appendChild(ta);ta.select();try{document.execCommand('copy');}catch(e){}document.body.removeChild(ta);toast('Copiado ✔','good');}
  if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(t).then(function(){toast('Copiado ✔','good');},fb);}else fb();}
-function shareFiles(text,images){var files=[];(images||[]).forEach(function(d,i){if(d){try{files.push(dataURLtoFile(d,'img-'+(i+1)+'.jpg'));}catch(e){}}});
- try{
-  if(files.length&&navigator.canShare&&navigator.canShare({files:files})){navigator.share({files:files,text:text,title:'CatálogoYa'}).catch(function(){});return true;}
-  if(!files.length&&navigator.share){navigator.share({text:text,title:'CatálogoYa'}).catch(function(){});return true;}
- }catch(e){}
- return false;}
+function copyImageToClipboard(dataUrl){
+ return new Promise(function(res){
+  try{
+   if(!navigator.clipboard||!window.ClipboardItem){res(false);return;}
+   var img=new Image();
+   img.onload=function(){var c=document.createElement('canvas');c.width=img.width;c.height=img.height;c.getContext('2d').drawImage(img,0,0);
+     c.toBlob(function(blob){if(!blob){res(false);return;}navigator.clipboard.write([new ClipboardItem({'image/png':blob})]).then(function(){res(true);},function(){res(false);});},'image/png');};
+   img.onerror=function(){res(false);};img.src=dataUrl;
+  }catch(e){res(false);}
+ });}
 async function sendCardToWhatsApp(imageData,text,phone){
  var file=null;try{file=dataURLtoFile(imageData,'tarjeta-catya.jpg');}catch(e){}
  if(file&&navigator.canShare&&navigator.canShare({files:[file]})){
   navigator.share({files:[file],text:text,title:'CatálogoYa'}).catch(function(err){if(err&&err.name==='AbortError'){openWaText(text,phone);}});
-  toast('Elige WhatsApp y el chat de la tienda','good');return;}
- downloadData(imageData,'tarjeta-catya.jpg');
+  toast('Elige WhatsApp y el chat de la tienda: la imagen viaja con el texto','good');return;}
+ var copied=await copyImageToClipboard(imageData);
  openWaText(text,phone);
- toast('Imagen descargada: adjúntala con 📎 en el chat','warn');}
+ if(copied){toast('📋 Tarjeta copiada: en el chat mantén pulsado y pega','good');}
+ else{downloadData(imageData,'tarjeta-catya.jpg');toast('Imagen descargada: adjúntala con 📎 en el chat','warn');}}
 function svgIconImg(name,color,px){
  return new Promise(function(res){
   var svg='<svg xmlns="http://www.w3.org/2000/svg" width="'+px+'" height="'+px+'" viewBox="0 0 24 24" fill="none" stroke="'+color+'" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'+ICON[name]+'</svg>';
@@ -217,7 +234,7 @@ function doRegister(){var n=$('#rgName').value.trim(),h=slug($('#rgHandle').valu
  STORES[s.id]=s;persistStores();setSession(s.id);enterApp();
  toast('🎉 Tienda "'+n+'" creada. Agrega tu primer producto.','good');setTimeout(function(){openAdmin();state.tab='inventario';renderAdmin();openProd();},600);}
 function enterApp(){applyTheme(curTheme());renderCartBadge();show('tienda');}
-/* 6 CARRITO */
+/* 6 CARRITO + fly */
 function vkey(v){var ks=Object.keys(v).sort(),out=[];ks.forEach(function(k){out.push(k+'='+v[k]);});return out.join('|');}
 function addToCart(pid,variant,qty,srcEl){
  var p=findP(pid);if(!p||p.stock<=0)return;
@@ -247,30 +264,12 @@ function landCart(){
  var t=document.getElementById('fabCart');
  if(t&&t.animate){t.animate([{transform:'scale(1)'},{transform:'scale(1.15)'},{transform:'scale(1)'}],{duration:300});}
  toast('Agregado al carrito ✔','good');}
-function cartCalc(){if(DB)ensureSettings();var promo=(DB&&DB.settings)?DB.settings.promo:{min:Infinity,percent:0};
- var lines=[],sub=0;cart.forEach(function(l){var p=findP(l.pid);if(!p)return;var lt=p.price*l.qty;sub+=lt;lines.push({l:l,p:p,lt:lt});});
- var disc=0;if(sub>=promo.min)disc=Math.round(sub*promo.percent/100);return {lines:lines,subtotal:sub,discount:disc,net:sub-disc};}
+function cartCalc(){var lines=[],sub=0;cart.forEach(function(l){var p=findP(l.pid);if(!p)return;var lt=p.price*l.qty;sub+=lt;lines.push({l:l,p:p,lt:lt});});
+ var disc=0;if(sub>=DB.settings.promo.min)disc=Math.round(sub*DB.settings.promo.percent/100);return {lines:lines,subtotal:sub,discount:disc,net:sub-disc};}
 function renderCartBadge(){var n=0;cart.forEach(function(l){n+=l.qty;});var t='RD$ 0';
  if(DB){t=fmt(cartCalc().net);}$('#fabCart').innerHTML=ic('cart',18)+'<span>'+t+' · '+n+'</span>';}
-function openCart(){if(DB)ensureSettings();$('#cartBk').className='bk show';$('#cartDr').className='drawer show';renderCart();}
+function openCart(){$('#cartBk').className='bk show';$('#cartDr').className='drawer show';renderCart();}
 function closeCart(){$('#cartBk').className='bk';$('#cartDr').className='drawer';}
-function renderCart(){var c=cartCalc();
- $('#cartHd').innerHTML='<div style="display:flex;align-items:center"><b style="font-size:18px;font-weight:700;flex:1">Tu carrito</b><button class="icon-btn" onclick="closeCart()">'+ic('x',18)+'</button></div>';
- if(!c.lines.length){$('#cartBd').innerHTML='<p style="text-align:center;color:var(--text2);padding:50px 0">Tu carrito está vacío.</p>';$('#cartFt').innerHTML='';return;}
- var rem=DB.settings.free_threshold-c.subtotal;
- $('#cartBd').innerHTML='<div style="font-size:13px;font-weight:700;color:'+(rem>0?'var(--amber)':'var(--ok)')+'">'+(rem>0?'🚚 Agrega '+fmt(rem)+' más para envío gratis en Santo Domingo':'🎉 ¡Envío gratis en Santo Domingo!')+'</div><div class="meter"><i style="width:'+Math.min(100,Math.round(c.subtotal/DB.settings.free_threshold*100))+'%"></i></div>'+
- c.lines.map(function(x,i){return '<div class="cline">'+swHTML(x.p)+'<div class="row-main" style="min-width:100px"><b style="font-size:14px">'+esc(x.p.name)+'</b><small>'+esc(Object.keys(x.l.variant).map(function(k){return x.l.variant[k];}).join(' · '))+' · '+fmt(x.p.price)+'</small></div>'+
-  '<div class="stepper"><button onclick="setQty('+i+','+(x.l.qty-1)+')">−</button><span>'+x.l.qty+'</span><button onclick="setQty('+i+','+(x.l.qty+1)+')">+</button></div>'+
-  '<b style="min-width:66px;text-align:right;font-size:14px">'+fmt(x.lt)+'</b><button class="icon-btn" onclick="removeLine('+i+')">'+ic('trash',16)+'</button></div>';}).join('');
- var dsc=c.discount>0?'<div style="display:flex;justify-content:space-between;font-size:13px;color:var(--ok);font-weight:700;margin-top:8px"><span>Promo ('+DB.settings.promo.percent+'%)</span><span>−'+fmt(c.discount)+'</span></div>':'';
- $('#cartFt').innerHTML='<div style="display:flex;justify-content:space-between;font-size:13px;color:var(--text2)"><span>Subtotal</span><span>'+fmt(c.subtotal)+'</span></div>'+dsc+
-  '<div style="display:flex;justify-content:space-between;font-weight:800;font-size:18px;margin:8px 0 14px"><span>Total</span><span>'+fmt(c.net)+'</span></div>'+
-  '<button class="btn btn-wa" style="width:100%;margin-bottom:10px" onclick="confirmAvailability()">'+icWa(17)+'Confirmar disponibilidad del pedido</button>'+
-  '<button class="btn btn-primary" style="width:100%" onclick="openCheckout()">Continuar pedido →</button>';}
-function setQty(i,q){if(q<=0){removeLine(i);return;}var p=findP(cart[i].pid);cart[i].qty=Math.min(p?p.stock:99,q);persistCart();renderCartBadge();renderCart();}
-var lastRemoved=null;
-function removeLine(i){lastRemoved={line:cart[i],i:i};cart.splice(i,1);persistCart();renderCartBadge();renderCart();
- toast('Artículo removido','warn','DESHACER',function(){cart.splice(lastRemoved.i,0,lastRemoved.line);persistCart();renderCartBadge();renderCart();});}
 function wrapText(ctx,text,maxW){var words=text.split(' '),lines=[],cur='';
  for(var i=0;i<words.length;i++){var t=cur?cur+' '+words[i]:words[i];
   if(ctx.measureText(t).width>maxW&&cur){lines.push(cur);cur=words[i];}else cur=t;}
@@ -321,15 +320,15 @@ function drawAvailabilityCard(lines){
      ctx.restore();});
    resolve(c.toDataURL('image/jpeg',0.92));});});}
 function checkoutUrl(){return storeUrl()+'?t='+DB.handle+'&completar=1';}
-var EMO={ basket:String.fromCodePoint(0x1F9FA), point:String.fromCodePoint(0x1F449),
-          truck:String.fromCodePoint(0x1F69A), pin:String.fromCodePoint(0x1F4CD),
-          card:String.fromCodePoint(0x1F4B3), hour:String.fromCodePoint(0x23F3) };
-function availabilityCaption(c){
- return 'Consulta de disponibilidad — '+DB.name+
-  '\n'+EMO.basket+' Total estimado: '+fmt(c.net)+
-  '\n'+EMO.point+' Completa la compra aquí:'+
-  '\n'+checkoutUrl()+
-  '\n¡Quedo a la espera de su confirmación! Muchas gracias.';}
+/* caption con UN SOLO enlace (el de la tarjeta si existe) */
+function availabilityCaption(c, link){
+  var t = 'Consulta de disponibilidad — '+DB.name+
+    '\n'+EMO.basket+' Total estimado: '+fmt(c.net);
+  if(link){ t += '\n'+EMO.point+' Ver los productos y completar compra:\n'+link; }
+  else { t += '\n'+EMO.point+' Completa la compra aquí:\n'+checkoutUrl(); }
+  t += '\n¡Quedo a la espera de su confirmación! Muchas gracias.';
+  return t;
+}
 function drawOrderCard(o){
  return new Promise(function(resolve){
   var visP=Promise.all(o.items.map(function(it){var p=findP(it.pid);return prodVisual(p||{hue:200,image:''});}));
@@ -389,7 +388,9 @@ function waOrderMessage(o){
  var pm=payLabel(o.payment_method);
  L.push(EMO.card+' Pago: '+pm.bank+(pm.type==='transfer'?' · '+pm.acct+' · Titular: '+pm.holder:''));
  L.push(EMO.hour+' Estado: Pendiente');
- return L.join('\n');}
+ return L.join('\n');
+}
+/* ============ RICH PREVIEW (tarjeta horizontal + link OG, sin bucket) ============ */
 function drawOGCard(items, heading, totalText){
   return new Promise(function(resolve){
     Promise.all(items.map(function(it){var p=(it&&it.pid)?findP(it.pid):null;return prodVisual(p||{hue:200,image:''});})).then(function(visArr){
@@ -423,6 +424,7 @@ async function prepareCardLink(items, heading, totalText, redirect){
     return link;
   }catch(e){ return null; }
 }
+/* ============ PÁGINA-SEMÁFORO (espera y va DIRECTO a WhatsApp) ============ */
 function openGate(portrait, buildText, phone, linkPromise){
   openModal(
    '<div style="text-align:center">'+
@@ -463,9 +465,9 @@ async function confirmAvailability(){
   if(document.fonts&&document.fonts.ready){try{await document.fonts.ready;}catch(e){}}
   var portrait=await drawAvailabilityCard(c.lines);
   var linkPromise=(SB_ON && typeof prepareCardLink==='function')
-     ? prepareCardLink(c.lines, 'Consulta de disponibilidad — '+DB.name, c.lines.length+' artículos · Total estimado '+fmt(c.net), storeUrl()+'?t='+DB.handle)
+     ? prepareCardLink(c.lines, 'Consulta de disponibilidad — '+DB.name, c.lines.length+' artículos · Total estimado '+fmt(c.net), storeUrl()+'?t='+DB.handle+'&completar=1')
      : null;
-  var buildText=function(link){ return availabilityCaption(c)+(link?('\n\n🔎 Ver los productos: '+link):''); };
+  var buildText=function(link){ return availabilityCaption(c, link); };
   openGate(portrait, buildText, storePhone(), linkPromise);
 }
 async function sendOrderWA(id){
@@ -475,7 +477,7 @@ async function sendOrderWA(id){
   var linkPromise=(SB_ON && typeof prepareCardLink==='function')
      ? prepareCardLink(o.items, 'Pedido #'+o.number+' — '+DB.name, o.items.length+' artículos · Total '+fmt(o.total), storeUrl()+'?t='+DB.handle)
      : null;
-  var buildText=function(link){ if(link){o.card_url=link; persist();} return waOrderMessage(o)+(link?('\n\n🔎 Ver los productos: '+link):''); };
+  var buildText=function(link){ if(link){o.card_url=link; persist();} return waOrderMessage(o)+(link?('\n\n'+EMO.mag+' Ver los productos: '+link):''); };
   openGate(portrait, buildText, storePhone(), linkPromise);
   markWaSent(id);
 }
