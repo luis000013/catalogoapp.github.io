@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- CatálogoYa v2.5 · index.html — markup de todas las vistas -->
+<!-- CatálogoYa v2.9 · index.html -->
 <html lang="es" data-theme="light">
 <head>
 <meta charset="UTF-8">
@@ -11,13 +11,14 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
+<div id="booterr"></div>
 
-<!-- ═══ AUTH ═══ -->
+<!-- AUTH -->
 <div id="v-auth" class="wrap" style="display:none">
-  <div class="authcard">
-    <div style="display:flex;align-items:center;margin-bottom:8px;gap:12px">
-      <div class="avatar" style="width:48px;height:48px;font-size:16px;border-width:0">CY</div>
-      <div><h1>CatálogoYa</h1><p style="font-size:13px;color:var(--text2);margin-top:4px">Tu tienda en línea con cierre por WhatsApp</p></div>
+  <div class="conf-card" style="max-width:440px;margin:8vh auto">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px">
+      <div class="avatar" style="width:48px;height:48px;font-size:16px">CY</div>
+      <div><h1 style="font-size:24px;font-weight:800">CatálogoYa</h1><p style="font-size:13px;color:var(--text2)">Tu tienda en línea con cierre por WhatsApp</p></div>
     </div>
     <div class="chips" style="margin:16px 0">
       <button class="chip on" id="authTabLogin" onclick="authTab('login')">Iniciar sesión</button>
@@ -29,7 +30,7 @@
       <div class="field"><label>Contraseña</label><input class="inp" id="liPass" type="password" placeholder="••••••"></div>
       <p id="liErr" style="color:var(--red);font-size:13px;font-weight:600;margin-bottom:8px"></p>
       <button class="btn btn-primary" style="width:100%" onclick="doLogin()">Entrar a mi panel</button>
-      <button class="btn btn-outline" style="width:100%;margin:12px 0 0" onclick="loginDemo()">✨ Entrar a la tienda demo</button>
+      <button class="btn btn-outline" style="width:100%;margin-top:12px" onclick="loginDemo()">✨ Entrar a la tienda demo</button>
     </div>
     <div id="authReg" style="display:none">
       <div class="field"><label>Nombre de la tienda *</label><input class="inp" id="rgName" placeholder="Alma Bazar" oninput="autoHandle(this.value)"></div>
@@ -39,11 +40,11 @@
       <p id="rgErr" style="color:var(--red);font-size:13px;font-weight:600;margin-bottom:8px"></p>
       <button class="btn btn-primary" style="width:100%" onclick="doRegister()">Crear mi tienda 🚀</button>
     </div>
-    <p style="font-size:11.5px;color:var(--text2);margin-top:16px;text-align:center">CatálogoYa v2.5 · Tus datos se guardan en Supabase</p>
+    <p style="font-size:11.5px;color:var(--text2);margin-top:16px;text-align:center">CatálogoYa v2.9 · Tus datos se guardan en Supabase</p>
   </div>
 </div>
 
-<!-- ═══ TIENDA (catálogo público) ═══ -->
+<!-- TIENDA -->
 <div id="v-tienda" class="wrap" style="display:none">
   <div class="hero" id="storeHead"></div>
   <div style="display:flex;flex-wrap:wrap;align-items:center;padding:8px 0 4px">
@@ -55,75 +56,53 @@
   <div class="chips" id="chips"></div>
   <div class="chips" id="subchips" style="margin-top:6px"></div>
   <div class="grid" id="grid"></div>
-  <p class="foot">CatálogoYa v2.5 · conectado a Supabase</p>
+  <p class="foot">CatálogoYa v2.9 · conectado a Supabase</p>
 </div>
 
-<!-- ═══ CHECKOUT ═══ -->
+<!-- CHECKOUT -->
 <div id="v-checkout" class="wrap" style="display:none;padding-bottom:120px">
   <div style="display:flex;align-items:center;padding:22px 0 0;gap:12px">
-    <button class="btn btn-outline" onclick="goTienda()">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg>Tienda
-    </button>
+    <button class="btn btn-outline" onclick="goTienda()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg>Tienda</button>
     <b style="font-size:22px;font-weight:800">Finalizar pedido</b>
   </div>
   <div class="steps" id="steps"></div>
   <div id="coBody"></div>
 </div>
 
-<!-- ═══ CONFIRMACIÓN ═══ -->
-<div id="v-confirm" class="wrap" style="display:none;padding:26px 16px 60px">
-  <div id="confBody"></div>
-</div>
+<!-- CONFIRMACIÓN -->
+<div id="v-confirm" class="wrap" style="display:none;padding:26px 16px 60px"><div id="confBody"></div></div>
 
-<!-- ═══ ADMIN (panel) ═══ -->
+<!-- ADMIN -->
 <div id="v-admin" class="wrap" style="display:none">
   <div class="ahead" id="adminHead"></div>
   <div class="utabs" id="adminTabs"></div>
   <div id="adminBody"></div>
-  <p class="foot">v2.5 · Los cambios se sincronizan entre todos tus dispositivos.</p>
+  <p class="foot">v2.9 · Los cambios se sincronizan entre todos tus dispositivos.</p>
 </div>
 
-<!-- ═══ OVERLAYS ═══ -->
-<!-- Carrito -->
+<!-- OVERLAYS -->
 <div class="bk" id="cartBk" onclick="closeCart()"></div>
-<div class="drawer" id="cartDr">
-  <div class="hd" id="cartHd"></div>
-  <div class="bd" id="cartBd"></div>
-  <div class="ft" id="cartFt"></div>
-</div>
-<!-- Detalle de pedido -->
+<div class="drawer" id="cartDr"><div class="hd" id="cartHd"></div><div class="bd" id="cartBd"></div><div class="ft" id="cartFt"></div></div>
+
 <div class="bk" id="orderBk" style="z-index:55" onclick="closeOrder()"></div>
-<div class="drawer" id="orderDr" style="z-index:56">
-  <div class="hd" id="ordHd"></div>
-  <div class="bd" id="ordBd"></div>
-</div>
-<!-- Formulario de producto -->
+<div class="drawer" id="orderDr" style="z-index:56"><div class="hd" id="ordHd"></div><div class="bd" id="ordBd"></div></div>
+
 <div class="bk" id="prodBk" style="z-index:55" onclick="closeProd()"></div>
-<div class="drawer" id="prodDr" style="z-index:56">
-  <div class="hd"><b style="font-size:18px;font-weight:700" id="prodTitle"></b></div>
-  <div class="bd" id="prodBd"></div>
-</div>
-<!-- Ficha de producto (sheet) -->
+<div class="drawer" id="prodDr" style="z-index:56"><div class="hd"><b style="font-size:18px;font-weight:700" id="prodTitle"></b></div><div class="bd" id="prodBd"></div></div>
+
 <div class="bk" id="sheetBk" onclick="closeSheet()"></div>
-<div class="drawer" id="sheetDr">
-  <div class="bd" id="sheetBd" style="padding-top:22px"></div>
-</div>
-<!-- Modal genérico -->
+<div class="drawer" id="sheetDr"><div class="bd" id="sheetBd" style="padding-top:22px"></div></div>
+
 <div class="bk" id="modalBk" style="z-index:80" onclick="closeModal()"></div>
-<div id="modalSlot" style="position:fixed;top:0;left:0;right:0;bottom:0;z-index:81;pointer-events:none"></div>
-<!-- Barra inferior (tienda) -->
-<div class="bottombar" id="bottomBar" style="display:none">
-  <div class="in">
-    <button class="btn btn-outline" style="border-radius:999px;padding:14px 24px" onclick="openAdmin()">
-      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.2 4.2l2.8 2.8M17 17l2.8 2.8M1 12h4M19 12h4M4.2 19.8 7 17M17 7l2.8-2.8"/></svg>Panel
-    </button>
-    <button class="btn btn-primary cart" id="fabCart" onclick="openCart()"></button>
-  </div>
-</div>
-<!-- Toasts -->
+<div id="modalSlot" style="position:fixed;inset:0;z-index:81;pointer-events:none"></div>
+
+<div class="bottombar" id="bottomBar" style="display:none"><div class="in">
+  <button class="btn btn-outline" style="border-radius:999px;padding:14px 24px" onclick="openAdmin()"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.2 4.2l2.8 2.8M17 17l2.8 2.8M1 12h4M19 12h4M4.2 19.8 7 17M17 7l2.8-2.8"/></svg>Panel</button>
+  <button class="btn btn-primary cart" id="fabCart" onclick="openCart()"></button>
+</div></div>
+
 <div id="toasts"></div>
 
-<!-- ═══ SCRIPTS (orden fijo, no cambiar) ═══ -->
 <script src="supabase-config.js"></script>
 <script src="app.js"></script>
 <script src="admin.js"></script>
