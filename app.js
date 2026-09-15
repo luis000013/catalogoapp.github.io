@@ -1,4 +1,7 @@
-/* CatálogoYa v3.1 · app.js — completo y depurado */
+/* CatálogoYa v3.2 · app.js — VERSIÓN CANÓNICA COMPLETA
+   (integra todo: catálogo, carrito, checkout, tarjetas, rich-link, semáforo)
+   Incluye renderCart() y shareFiles() que faltaban en v3.1.
+   De aquí en adelante, cualquier cambio futuro se hace regenerando este archivo completo. */
 /* 1 ICONOS */
 var ICON={
  cart:'<circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/>',
@@ -166,6 +169,12 @@ function shareStore(){var u=storeUrl()+'?t='+DB.handle;
 function openWaText(text,phone){window.open('https://wa.me/'+(phone||storePhone())+'?text='+encodeURIComponent(text),'_blank');}
 function copyText(t){function fb(){var ta=document.createElement('textarea');ta.value=t;document.body.appendChild(ta);ta.select();try{document.execCommand('copy');}catch(e){}document.body.removeChild(ta);toast('Copiado ✔','good');}
  if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(t).then(function(){toast('Copiado ✔','good');},fb);}else fb();}
+function shareFiles(text,images){var files=[];(images||[]).forEach(function(d,i){if(d){try{files.push(dataURLtoFile(d,'img-'+(i+1)+'.jpg'));}catch(e){}}});
+ try{
+  if(files.length&&navigator.canShare&&navigator.canShare({files:files})){navigator.share({files:files,text:text,title:'CatálogoYa'}).catch(function(){});return true;}
+  if(!files.length&&navigator.share){navigator.share({text:text,title:'CatálogoYa'}).catch(function(){});return true;}
+ }catch(e){}
+ return false;}
 async function sendCardToWhatsApp(imageData,text,phone){
  var file=null;try{file=dataURLtoFile(imageData,'tarjeta-catya.jpg');}catch(e){}
  if(file&&navigator.canShare&&navigator.canShare({files:[file]})){
@@ -245,6 +254,23 @@ function renderCartBadge(){var n=0;cart.forEach(function(l){n+=l.qty;});var t='R
  if(DB){t=fmt(cartCalc().net);}$('#fabCart').innerHTML=ic('cart',18)+'<span>'+t+' · '+n+'</span>';}
 function openCart(){if(DB)ensureSettings();$('#cartBk').className='bk show';$('#cartDr').className='drawer show';renderCart();}
 function closeCart(){$('#cartBk').className='bk';$('#cartDr').className='drawer';}
+function renderCart(){var c=cartCalc();
+ $('#cartHd').innerHTML='<div style="display:flex;align-items:center"><b style="font-size:18px;font-weight:700;flex:1">Tu carrito</b><button class="icon-btn" onclick="closeCart()">'+ic('x',18)+'</button></div>';
+ if(!c.lines.length){$('#cartBd').innerHTML='<p style="text-align:center;color:var(--text2);padding:50px 0">Tu carrito está vacío.</p>';$('#cartFt').innerHTML='';return;}
+ var rem=DB.settings.free_threshold-c.subtotal;
+ $('#cartBd').innerHTML='<div style="font-size:13px;font-weight:700;color:'+(rem>0?'var(--amber)':'var(--ok)')+'">'+(rem>0?'🚚 Agrega '+fmt(rem)+' más para envío gratis en Santo Domingo':'🎉 ¡Envío gratis en Santo Domingo!')+'</div><div class="meter"><i style="width:'+Math.min(100,Math.round(c.subtotal/DB.settings.free_threshold*100))+'%"></i></div>'+
+ c.lines.map(function(x,i){return '<div class="cline">'+swHTML(x.p)+'<div class="row-main" style="min-width:100px"><b style="font-size:14px">'+esc(x.p.name)+'</b><small>'+esc(Object.keys(x.l.variant).map(function(k){return x.l.variant[k];}).join(' · '))+' · '+fmt(x.p.price)+'</small></div>'+
+  '<div class="stepper"><button onclick="setQty('+i+','+(x.l.qty-1)+')">−</button><span>'+x.l.qty+'</span><button onclick="setQty('+i+','+(x.l.qty+1)+')">+</button></div>'+
+  '<b style="min-width:66px;text-align:right;font-size:14px">'+fmt(x.lt)+'</b><button class="icon-btn" onclick="removeLine('+i+')">'+ic('trash',16)+'</button></div>';}).join('');
+ var dsc=c.discount>0?'<div style="display:flex;justify-content:space-between;font-size:13px;color:var(--ok);font-weight:700;margin-top:8px"><span>Promo ('+DB.settings.promo.percent+'%)</span><span>−'+fmt(c.discount)+'</span></div>':'';
+ $('#cartFt').innerHTML='<div style="display:flex;justify-content:space-between;font-size:13px;color:var(--text2)"><span>Subtotal</span><span>'+fmt(c.subtotal)+'</span></div>'+dsc+
+  '<div style="display:flex;justify-content:space-between;font-weight:800;font-size:18px;margin:8px 0 14px"><span>Total</span><span>'+fmt(c.net)+'</span></div>'+
+  '<button class="btn btn-wa" style="width:100%;margin-bottom:10px" onclick="confirmAvailability()">'+icWa(17)+'Confirmar disponibilidad del pedido</button>'+
+  '<button class="btn btn-primary" style="width:100%" onclick="openCheckout()">Continuar pedido →</button>';}
+function setQty(i,q){if(q<=0){removeLine(i);return;}var p=findP(cart[i].pid);cart[i].qty=Math.min(p?p.stock:99,q);persistCart();renderCartBadge();renderCart();}
+var lastRemoved=null;
+function removeLine(i){lastRemoved={line:cart[i],i:i};cart.splice(i,1);persistCart();renderCartBadge();renderCart();
+ toast('Artículo removido','warn','DESHACER',function(){cart.splice(lastRemoved.i,0,lastRemoved.line);persistCart();renderCartBadge();renderCart();});}
 function wrapText(ctx,text,maxW){var words=text.split(' '),lines=[],cur='';
  for(var i=0;i<words.length;i++){var t=cur?cur+' '+words[i]:words[i];
   if(ctx.measureText(t).width>maxW&&cur){lines.push(cur);cur=words[i];}else cur=t;}
