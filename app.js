@@ -1,4 +1,4 @@
-/* CatálogoYa v3.6 · app.js — COMPLETO (WhatsApp directo + imagen al portapapeles) */
+/* CatálogoYa v3.7 · app.js — COMPLETO (preview con íconos/fotos + WhatsApp directo) */
 /* 1 ICONOS */
 var ICON={
  cart:'<circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/>',
@@ -186,27 +186,15 @@ function saveStoreContact(){
  var a=document.createElement('a');a.href=url;a.download=name.replace(/\s+/g,'_')+'.vcf';
  document.body.appendChild(a);a.click();a.remove();
  setTimeout(function(){URL.revokeObjectURL(url);},2000);
- toast('Se abrió la ficha de contacto: tócala y GUARDAR. Luego podrás compartir la tarjeta directo al chat.','good');
+ toast('Se abrió la ficha de contacto: tócala y GUARDAR.','good');
 }
 function openWaText(text,phone){window.open('https://wa.me/'+(phone||storePhone())+'?text='+encodeURIComponent(text),'_blank');}
 function copyText(t){function fb(){var ta=document.createElement('textarea');ta.value=t;document.body.appendChild(ta);ta.select();try{document.execCommand('copy');}catch(e){}document.body.removeChild(ta);toast('Copiado ✔','good');}
  if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(t).then(function(){toast('Copiado ✔','good');},fb);}else fb();}
-function copyImageToClipboard(dataUrl){
- return new Promise(function(res){
-  try{
-   if(!navigator.clipboard||!window.ClipboardItem){res(false);return;}
-   var img=new Image();
-   img.onload=function(){var c=document.createElement('canvas');c.width=img.width;c.height=img.height;c.getContext('2d').drawImage(img,0,0);
-     c.toBlob(function(blob){if(!blob){res(false);return;}navigator.clipboard.write([new ClipboardItem({'image/png':blob})]).then(function(){res(true);},function(){res(false);});},'image/png');};
-   img.onerror=function(){res(false);};img.src=dataUrl;
-  }catch(e){res(false);}
- });}
-/* v3.6: abre WhatsApp DIRECTO y deja la IMAGEN copiada en el portapapeles */
+/* v3.7: ya NO copiamos/adjuntamos; WhatsApp muestra la vista previa del enlace */
 async function sendCardToWhatsApp(imageData,text,phone){
-  openWaText(text, phone);
-  var copied = await copyImageToClipboard(imageData);
-  if(copied){ toast('📋 Imagen copiada. En WhatsApp mantén pulsado el campo de texto y toca Pegar para enviarla con el mensaje.','good'); }
-  else { downloadData(imageData,'tarjeta-catya.jpg'); toast('No se pudo copiar la imagen; se descargó. Adjúntala con 📎 en el chat.','warn'); }
+ openWaText(text, phone);
+ toast('Se abrió WhatsApp con el enlace: la vista previa muestra la tarjeta con los productos.','good');
 }
 function svgIconImg(name,color,px){
  return new Promise(function(res){
@@ -304,12 +292,25 @@ function roundRectPath(ctx,x,y,w,h,r){ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcT
 function drawContain(ctx,im,x,y,w,h){var ir=im.width/im.height,r=w/h,dw,dh;
  if(ir>r){dw=w;dh=w/ir;}else{dh=h;dw=h*ir;}
  ctx.drawImage(im,x+(w-dw)/2,y+(h-dh)/2,dw,dh);}
+/* v3.7: carga foto SI hay; si no, carga el ÍCONO de la categoría (adiós cuadros vacíos) */
 function cardVisual(line){
- return new Promise(function(res){
-  var out={img:null,bg:'hsl('+line.p.hue+',55%,66%)'};
-  if(line.p.image){var im=new Image();im.onload=function(){out.img=im;res(out);};im.onerror=function(){res(out);};im.src=line.p.image;return;}
-  res(out);});}
+  return new Promise(function(res){
+    var out={img:null,icon:null,bg:'hsl('+line.p.hue+',55%,66%)',fg:'hsl('+line.p.hue+',45%,30%)'};
+    var pending=0;
+    var finish=function(){ pending--; if(pending<=0) res(out); };
+    if(line.p.image){ pending++; var im=new Image(); im.onload=function(){out.img=im;finish();}; im.onerror=function(){finish();}; im.src=line.p.image; }
+    else { pending++; svgIconImg(catIcon(line.p.cat), out.fg, 140).then(function(icn){ out.icon=icn; finish(); }); }
+  });
+}
 function prodVisual(p){return cardVisual({p:p});}
+/* v3.7: dibuja el recuadro con foto o, si no hay, el ícono encima del color */
+function drawTile(ctx,v,x,y,w,h){
+  ctx.save();ctx.beginPath();ctx.rect(x,y,w,h);ctx.clip();
+  ctx.fillStyle=v.bg;ctx.fillRect(x,y,w,h);
+  if(v.img){drawContain(ctx,v.img,x,y,w,h);}
+  else if(v.icon){var s=Math.min(w,h)*0.5;ctx.drawImage(v.icon,x+(w-s)/2,y+(h-s)/2,s,s);}
+  ctx.restore();
+}
 function drawAvailabilityCard(lines){
  return new Promise(function(resolve){
   Promise.all(lines.map(cardVisual)).then(function(vis){
@@ -335,8 +336,7 @@ function drawAvailabilityCard(lines){
      var x=pad+col*(cardW+gap),yy=gridY+row*(cardH+gap);
      var v=vis[i];
      ctx.save();roundRectPath(ctx,x,yy,cardW,cardH,28);ctx.clip();
-     ctx.fillStyle=v.bg;ctx.fillRect(x,yy,cardW,imgH);
-     if(v.img)drawContain(ctx,v.img,x,yy,cardW,imgH);
+     drawTile(ctx,v,x,yy,cardW,imgH);
      ctx.fillStyle='#20302a';ctx.fillRect(x,yy+imgH,cardW,infoH);
      ctx.fillStyle='#ffffff';ctx.font='600 42px '+F;
      var nl=wrapText(ctx,ln.p.name,cardW-48).slice(0,2);
@@ -391,8 +391,7 @@ function drawOrderCard(o){
      var v=vis[i];
      ctx.save();roundRectPath(ctx,pad,yy,W-pad*2,rowH,24);ctx.clip();
      ctx.fillStyle='#f7f8f8';ctx.fillRect(pad,yy,W-pad*2,rowH);
-     ctx.fillStyle=v.bg;ctx.fillRect(pad,yy,rowH,rowH);
-     if(v.img)drawContain(ctx,v.img,pad,yy,rowH,rowH);
+     drawTile(ctx,v,pad,yy,rowH,rowH);
      var ix=pad+rowH+28;
      ctx.fillStyle='#1c1c1e';ctx.font='600 40px '+F;ctx.fillText(it.qty+'x '+it.name,ix,yy+34);
      var variant=Object.keys(it.variant).map(function(k){return it.variant[k];}).join(' · ');
@@ -427,10 +426,7 @@ function drawOGCard(items, heading, totalText){
       ctx.fillStyle='#c9d5ce';ctx.font='400 32px '+F;ctx.fillText(totalText,60,210);
       var n=Math.min(4,visArr.length),size=190,gap=18,x0=640,y0=80;
       for(var i=0;i<n;i++){var col=i%2,row=Math.floor(i/2);var x=x0+col*(size+gap),y=y0+row*(size+gap);var v=visArr[i];
-        ctx.save();ctx.beginPath();ctx.rect(x,y,size,size);ctx.clip();
-        ctx.fillStyle=v.bg;ctx.fillRect(x,y,size,size);
-        if(v.img)drawContain(ctx,v.img,x,y,size,size);
-        ctx.restore();}
+        drawTile(ctx,v,x,y,size,size);}
       ctx.fillStyle='#aec0b6';ctx.font='400 26px '+F;ctx.fillText('CatálogoYa · vista del pedido',60,560);
       resolve(c.toDataURL('image/jpeg',0.9));
     });
@@ -457,7 +453,7 @@ function openGate(portrait, buildText, phone, linkPromise){
    '<p id="gateStatus" style="color:var(--text2);font-size:13px;margin-top:6px">Calentando el enlace para la vista previa…</p>'+
    '<button id="gateBtn" class="btn btn-wa" disabled style="width:100%;margin-top:14px">'+icWa(18)+'Ir a WhatsApp y enviar</button>'+
    '<button id="gateSave" class="btn btn-outline" style="width:100%;margin-top:8px" onclick="saveStoreContact()">'+ic('user',16)+'Guardar número de la tienda (1 vez)</button>'+
-   '<p style="font-size:12px;color:var(--text2);margin-top:10px">Se abrirá WhatsApp directo y la imagen quedará copiada para pegar.</p>'+
+   '<p style="font-size:12px;color:var(--text2);margin-top:10px">Se abrirá WhatsApp directo; la vista previa muestra la tarjeta.</p>'+
    '</div>');
   var count=3;
   var ci=setInterval(function(){
@@ -471,7 +467,7 @@ function openGate(portrait, buildText, phone, linkPromise){
   Promise.all([lp, minDelay]).then(function(resArr){
     var link=resArr[0];
     var st=document.getElementById('gateStatus');
-    if(st) st.textContent = '✓ Listo. Al pulsar, WhatsApp se abre y la imagen queda copiada.';
+    if(st) st.textContent = '✓ Listo. Al pulsar, WhatsApp muestra la tarjeta en la vista previa.';
     var b=document.getElementById('gateBtn');
     if(b){ b.disabled=false;
       b.onclick=function(){
@@ -678,7 +674,7 @@ function renderConfirm(o){var pm=payLabel(o.payment_method),msg=waOrderMessage(o
   '<h1 style="font-size:38px;font-weight:900;margin:12px 0 6px;letter-spacing:-.02em">#'+o.number+'</h1>'+
   '<p style="color:var(--text2);font-size:15px">Total '+fmt(o.total)+' · '+esc(pm.bank)+'</p>'+
   '<div style="margin:16px 0"><button class="btn btn-wa" style="width:100%" onclick="sendOrderWA(\''+o.id+'\')">'+icWa(18)+'Enviar pedido por WhatsApp</button></div>'+
-  '<p style="font-size:13px;color:var(--text2)">Se abrirá WhatsApp directo y la imagen quedará copiada para pegar.</p></div>'+
+  '<p style="font-size:13px;color:var(--text2)">Se abrirá WhatsApp directo; la vista previa muestra la tarjeta con los productos.</p></div>'+
   (pm.type==='transfer'?'<div class="conf-card"><b style="font-size:17px;font-weight:700">Datos para tu transferencia</b><div style="margin-top:12px">'+
    banks.map(function(b){return '<div class="bankline"><b>'+esc(b.bank)+'</b> '+esc(b.acct)+' · '+esc(b.holder)+'<button onclick="copyText(\''+esc(b.bank+' '+b.acct+' '+b.holder)+'\')">COPIAR</button></div>';}).join('')+'</div>':'')+
   (o.proofImage?'<div class="conf-card"><b style="font-size:15px;font-weight:700">📎 Comprobante adjunto</b><div style="margin-top:8px"><img src="'+o.proofImage+'" style="width:72px;height:72px;object-fit:cover;border-radius:12px"></div></div>':'')+
