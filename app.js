@@ -1,6 +1,4 @@
-/* CatálogoYa v3.5 · app.js — COMPLETO (tarjeta en Vercel + compartir + semáforo) */
-var DIRECT_MODE = false;
-
+/* CatálogoYa v3.6 · app.js — COMPLETO (WhatsApp directo + imagen al portapapeles) */
 /* 1 ICONOS */
 var ICON={
  cart:'<circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/>',
@@ -203,15 +201,13 @@ function copyImageToClipboard(dataUrl){
    img.onerror=function(){res(false);};img.src=dataUrl;
   }catch(e){res(false);}
  });}
+/* v3.6: abre WhatsApp DIRECTO y deja la IMAGEN copiada en el portapapeles */
 async function sendCardToWhatsApp(imageData,text,phone){
- var file=null;try{file=dataURLtoFile(imageData,'tarjeta-catya.jpg');}catch(e){}
- if(file&&navigator.canShare&&navigator.canShare({files:[file]})){
-  navigator.share({files:[file],text:text,title:'CatálogoYa'}).catch(function(err){if(err&&err.name==='AbortError'){openWaText(text,phone);}});
-  toast('Elige WhatsApp y luego el chat de la tienda: la imagen viaja con el texto','good');return;}
- var copied=await copyImageToClipboard(imageData);
- openWaText(text,phone);
- if(copied){toast('📋 Tarjeta copiada: en el chat mantén pulsado y pega','good');}
- else{downloadData(imageData,'tarjeta-catya.jpg');toast('Imagen descargada: adjúntala con 📎 en el chat','warn');}}
+  openWaText(text, phone);
+  var copied = await copyImageToClipboard(imageData);
+  if(copied){ toast('📋 Imagen copiada. En WhatsApp mantén pulsado el campo de texto y toca Pegar para enviarla con el mensaje.','good'); }
+  else { downloadData(imageData,'tarjeta-catya.jpg'); toast('No se pudo copiar la imagen; se descargó. Adjúntala con 📎 en el chat.','warn'); }
+}
 function svgIconImg(name,color,px){
  return new Promise(function(res){
   var svg='<svg xmlns="http://www.w3.org/2000/svg" width="'+px+'" height="'+px+'" viewBox="0 0 24 24" fill="none" stroke="'+color+'" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'+ICON[name]+'</svg>';
@@ -461,7 +457,7 @@ function openGate(portrait, buildText, phone, linkPromise){
    '<p id="gateStatus" style="color:var(--text2);font-size:13px;margin-top:6px">Calentando el enlace para la vista previa…</p>'+
    '<button id="gateBtn" class="btn btn-wa" disabled style="width:100%;margin-top:14px">'+icWa(18)+'Ir a WhatsApp y enviar</button>'+
    '<button id="gateSave" class="btn btn-outline" style="width:100%;margin-top:8px" onclick="saveStoreContact()">'+ic('user',16)+'Guardar número de la tienda (1 vez)</button>'+
-   '<p style="font-size:12px;color:var(--text2);margin-top:10px">Guarda el número 1 vez y luego comparte la tarjeta directo al chat.</p>'+
+   '<p style="font-size:12px;color:var(--text2);margin-top:10px">Se abrirá WhatsApp directo y la imagen quedará copiada para pegar.</p>'+
    '</div>');
   var count=3;
   var ci=setInterval(function(){
@@ -475,13 +471,12 @@ function openGate(portrait, buildText, phone, linkPromise){
   Promise.all([lp, minDelay]).then(function(resArr){
     var link=resArr[0];
     var st=document.getElementById('gateStatus');
-    if(st) st.textContent = '✓ Tarjeta lista. Elige WhatsApp para enviarla.';
+    if(st) st.textContent = '✓ Listo. Al pulsar, WhatsApp se abre y la imagen queda copiada.';
     var b=document.getElementById('gateBtn');
     if(b){ b.disabled=false;
       b.onclick=function(){
         closeModal();
-        if(DIRECT_MODE && link){ openWaText(buildText(link), phone); }
-        else{ sendCardToWhatsApp(portrait, buildText(link), phone); }
+        sendCardToWhatsApp(portrait, buildText(link), phone);
       };
     }
   });
@@ -683,7 +678,7 @@ function renderConfirm(o){var pm=payLabel(o.payment_method),msg=waOrderMessage(o
   '<h1 style="font-size:38px;font-weight:900;margin:12px 0 6px;letter-spacing:-.02em">#'+o.number+'</h1>'+
   '<p style="color:var(--text2);font-size:15px">Total '+fmt(o.total)+' · '+esc(pm.bank)+'</p>'+
   '<div style="margin:16px 0"><button class="btn btn-wa" style="width:100%" onclick="sendOrderWA(\''+o.id+'\')">'+icWa(18)+'Enviar pedido por WhatsApp</button></div>'+
-  '<p style="font-size:13px;color:var(--text2)">Verás la pantalla-semáforo: espera el ✓ y pulsa el botón para enviar la tarjeta con los productos.</p></div>'+
+  '<p style="font-size:13px;color:var(--text2)">Se abrirá WhatsApp directo y la imagen quedará copiada para pegar.</p></div>'+
   (pm.type==='transfer'?'<div class="conf-card"><b style="font-size:17px;font-weight:700">Datos para tu transferencia</b><div style="margin-top:12px">'+
    banks.map(function(b){return '<div class="bankline"><b>'+esc(b.bank)+'</b> '+esc(b.acct)+' · '+esc(b.holder)+'<button onclick="copyText(\''+esc(b.bank+' '+b.acct+' '+b.holder)+'\')">COPIAR</button></div>';}).join('')+'</div>':'')+
   (o.proofImage?'<div class="conf-card"><b style="font-size:15px;font-weight:700">📎 Comprobante adjunto</b><div style="margin-top:8px"><img src="'+o.proofImage+'" style="width:72px;height:72px;object-fit:cover;border-radius:12px"></div></div>':'')+
