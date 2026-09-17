@@ -1,4 +1,4 @@
-/* CatálogoYa v3.7 · app.js — COMPLETO (preview con íconos/fotos + WhatsApp directo) */
+/* CatálogoYa v3.8 · app.js — COMPLETO (preview con producto real + sin botón guardar contacto) */
 /* 1 ICONOS */
 var ICON={
  cart:'<circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/>',
@@ -177,21 +177,10 @@ function dataURLtoFile(dataurl,filename){var arr=dataurl.split(','),mime=(arr[0]
 function downloadData(d,name){if(!d)return;var a=document.createElement('a');a.href=d;a.download=name||'imagen.jpg';document.body.appendChild(a);a.click();a.remove();}
 function shareStore(){var u=storeUrl()+'?t='+DB.handle;
  if(navigator.share){navigator.share({title:DB.name,url:u}).catch(function(){});}else copyText(u);}
-function saveStoreContact(){
- var name=DB?DB.name:'Mi Tienda';
- var phone=storePhone();
- var vcf='BEGIN:VCARD\nVERSION:3.0\nFN:'+name+'\nN:'+name+';;;\nTEL;TYPE=CELL,VOICE:+'+phone+'\nORG:'+name+'\nURL:'+storeUrl()+'\nEND:VCARD\n';
- var blob=new Blob([vcf],{type:'text/vcard'});
- var url=URL.createObjectURL(blob);
- var a=document.createElement('a');a.href=url;a.download=name.replace(/\s+/g,'_')+'.vcf';
- document.body.appendChild(a);a.click();a.remove();
- setTimeout(function(){URL.revokeObjectURL(url);},2000);
- toast('Se abrió la ficha de contacto: tócala y GUARDAR.','good');
-}
 function openWaText(text,phone){window.open('https://wa.me/'+(phone||storePhone())+'?text='+encodeURIComponent(text),'_blank');}
 function copyText(t){function fb(){var ta=document.createElement('textarea');ta.value=t;document.body.appendChild(ta);ta.select();try{document.execCommand('copy');}catch(e){}document.body.removeChild(ta);toast('Copiado ✔','good');}
  if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(t).then(function(){toast('Copiado ✔','good');},fb);}else fb();}
-/* v3.7: ya NO copiamos/adjuntamos; WhatsApp muestra la vista previa del enlace */
+/* v3.7+: WhatsApp directo; la vista previa del enlace muestra la tarjeta */
 async function sendCardToWhatsApp(imageData,text,phone){
  openWaText(text, phone);
  toast('Se abrió WhatsApp con el enlace: la vista previa muestra la tarjeta con los productos.','good');
@@ -292,7 +281,7 @@ function roundRectPath(ctx,x,y,w,h,r){ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcT
 function drawContain(ctx,im,x,y,w,h){var ir=im.width/im.height,r=w/h,dw,dh;
  if(ir>r){dw=w;dh=w/ir;}else{dh=h;dw=h*ir;}
  ctx.drawImage(im,x+(w-dw)/2,y+(h-dh)/2,dw,dh);}
-/* v3.7: carga foto SI hay; si no, carga el ÍCONO de la categoría (adiós cuadros vacíos) */
+/* v3.7: foto si hay; si no, ícono de categoría (nunca cuadro vacío) */
 function cardVisual(line){
   return new Promise(function(res){
     var out={img:null,icon:null,bg:'hsl('+line.p.hue+',55%,66%)',fg:'hsl('+line.p.hue+',45%,30%)'};
@@ -303,7 +292,6 @@ function cardVisual(line){
   });
 }
 function prodVisual(p){return cardVisual({p:p});}
-/* v3.7: dibuja el recuadro con foto o, si no hay, el ícono encima del color */
 function drawTile(ctx,v,x,y,w,h){
   ctx.save();ctx.beginPath();ctx.rect(x,y,w,h);ctx.clip();
   ctx.fillStyle=v.bg;ctx.fillRect(x,y,w,h);
@@ -414,9 +402,13 @@ function waOrderMessage(o){
  L.push(EMO.hour+' Estado: Pendiente');
  return L.join('\n');
 }
+/* v3.8: usa el producto REAL (it.p del carrito O findP por pid) — adiós cuadros genéricos */
 function drawOGCard(items, heading, totalText){
   return new Promise(function(resolve){
-    Promise.all(items.map(function(it){var p=(it&&it.pid)?findP(it.pid):null;return prodVisual(p||{hue:200,image:''});})).then(function(visArr){
+    Promise.all(items.map(function(it){
+      var p = (it && it.p) ? it.p : ((it && it.pid) ? findP(it.pid) : null);
+      return prodVisual(p || {hue:200,image:''});
+    })).then(function(visArr){
       var W=1200,H=630,F='Inter, Arial, sans-serif';
       var c=document.createElement('canvas');c.width=W;c.height=H;var ctx=c.getContext('2d');
       ctx.fillStyle='#0e453a';ctx.fillRect(0,0,W,H);
@@ -444,6 +436,7 @@ async function prepareCardLink(items, heading, totalText, redirect){
     return link;
   }catch(e){ return null; }
 }
+/* v3.8: SIN botón de guardar contacto */
 function openGate(portrait, buildText, phone, linkPromise){
   openModal(
    '<div style="text-align:center">'+
@@ -452,7 +445,6 @@ function openGate(portrait, buildText, phone, linkPromise){
    '<div id="gateCount" style="font-size:46px;font-weight:900;line-height:1">3</div>'+
    '<p id="gateStatus" style="color:var(--text2);font-size:13px;margin-top:6px">Calentando el enlace para la vista previa…</p>'+
    '<button id="gateBtn" class="btn btn-wa" disabled style="width:100%;margin-top:14px">'+icWa(18)+'Ir a WhatsApp y enviar</button>'+
-   '<button id="gateSave" class="btn btn-outline" style="width:100%;margin-top:8px" onclick="saveStoreContact()">'+ic('user',16)+'Guardar número de la tienda (1 vez)</button>'+
    '<p style="font-size:12px;color:var(--text2);margin-top:10px">Se abrirá WhatsApp directo; la vista previa muestra la tarjeta.</p>'+
    '</div>');
   var count=3;
@@ -503,6 +495,7 @@ async function sendOrderWA(id){
 function markWaSent(id){var o=findO(id);if(o&&!o.wa_sent_at){o.wa_sent_at=new Date().toISOString();persist();toast('Pedido transmitido al vendedor ✔','good');}}
 /* 8 CATALOGO */
 function cats(){var seen={},out=['Todo'];DB.products.forEach(function(p){if(!seen[p.cat]){seen[p.cat]=1;out.push(p.cat);}});return out;}
+/* v3.8: sin botón guardar contacto en el encabezado */
 function renderStoreHead(){
  var ini=DB.name.slice(0,2).toUpperCase();
  var logoHtml=DB.logo?'<img src="'+DB.logo+'" alt="">':esc(ini);
@@ -523,8 +516,7 @@ function renderStoreHead(){
   '<div class="hero-actions">'+
    '<a class="wa-big" href="https://wa.me/'+storePhone()+'?text='+encodeURIComponent('Hola 👋 vengo del catálogo de '+DB.name)+'" target="_blank" rel="noopener noreferrer">'+icWa(22)+'WhatsApp</a>'+
    (DB.settings.insta?'<a class="sq-social" href="https://instagram.com/'+esc(String(DB.settings.insta).replace('@',''))+'" target="_blank" rel="noopener noreferrer">'+ic('ig',24)+'</a>':'')+
-   '<button class="sq-social" onclick="shareStore()">'+ic('share',22)+'</button>'+
-   '<button class="sq-social" onclick="saveStoreContact()" title="Guardar número de la tienda">'+ic('user',22)+'</button></div>'+
+   '<button class="sq-social" onclick="shareStore()">'+ic('share',22)+'</button></div>'+
   '<div class="features">'+
    '<div class="feature">'+ic('truck',22)+'Envíos nacionales</div>'+
    '<div class="feature">'+ic('bank',22)+'Transf. bancario</div>'+
