@@ -1,4 +1,6 @@
-/* CatálogoYa v3.2 · app.js — COMPLETO (carrito + rich preview + semáforo) */
+/* CatálogoYa v3.5 · app.js — COMPLETO (tarjeta en Vercel + compartir + semáforo) */
+var DIRECT_MODE = false;
+
 /* 1 ICONOS */
 var ICON={
  cart:'<circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/>',
@@ -177,6 +179,17 @@ function dataURLtoFile(dataurl,filename){var arr=dataurl.split(','),mime=(arr[0]
 function downloadData(d,name){if(!d)return;var a=document.createElement('a');a.href=d;a.download=name||'imagen.jpg';document.body.appendChild(a);a.click();a.remove();}
 function shareStore(){var u=storeUrl()+'?t='+DB.handle;
  if(navigator.share){navigator.share({title:DB.name,url:u}).catch(function(){});}else copyText(u);}
+function saveStoreContact(){
+ var name=DB?DB.name:'Mi Tienda';
+ var phone=storePhone();
+ var vcf='BEGIN:VCARD\nVERSION:3.0\nFN:'+name+'\nN:'+name+';;;\nTEL;TYPE=CELL,VOICE:+'+phone+'\nORG:'+name+'\nURL:'+storeUrl()+'\nEND:VCARD\n';
+ var blob=new Blob([vcf],{type:'text/vcard'});
+ var url=URL.createObjectURL(blob);
+ var a=document.createElement('a');a.href=url;a.download=name.replace(/\s+/g,'_')+'.vcf';
+ document.body.appendChild(a);a.click();a.remove();
+ setTimeout(function(){URL.revokeObjectURL(url);},2000);
+ toast('Se abrió la ficha de contacto: tócala y GUARDAR. Luego podrás compartir la tarjeta directo al chat.','good');
+}
 function openWaText(text,phone){window.open('https://wa.me/'+(phone||storePhone())+'?text='+encodeURIComponent(text),'_blank');}
 function copyText(t){function fb(){var ta=document.createElement('textarea');ta.value=t;document.body.appendChild(ta);ta.select();try{document.execCommand('copy');}catch(e){}document.body.removeChild(ta);toast('Copiado ✔','good');}
  if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(t).then(function(){toast('Copiado ✔','good');},fb);}else fb();}
@@ -194,7 +207,7 @@ async function sendCardToWhatsApp(imageData,text,phone){
  var file=null;try{file=dataURLtoFile(imageData,'tarjeta-catya.jpg');}catch(e){}
  if(file&&navigator.canShare&&navigator.canShare({files:[file]})){
   navigator.share({files:[file],text:text,title:'CatálogoYa'}).catch(function(err){if(err&&err.name==='AbortError'){openWaText(text,phone);}});
-  toast('Elige WhatsApp y el chat de la tienda: la imagen viaja con el texto','good');return;}
+  toast('Elige WhatsApp y luego el chat de la tienda: la imagen viaja con el texto','good');return;}
  var copied=await copyImageToClipboard(imageData);
  openWaText(text,phone);
  if(copied){toast('📋 Tarjeta copiada: en el chat mantén pulsado y pega','good');}
@@ -433,9 +446,9 @@ async function prepareCardLink(items, heading, totalText, redirect){
     var og = await drawOGCard(items, heading, totalText);
     var token = uid()+uid();
     await sb.from('cards').insert({ token:token, title:heading, description:totalText, image_b64:og, redirect_url:redirect||'' });
-    var link = SB_URL + '/functions/v1/card/' + token;
+    var link = window.location.origin + '/api/card/' + token;
     fetch(link).catch(function(){});
-    fetch(link + '/img').catch(function(){});
+    fetch(link + '?img=1').catch(function(){});
     return link;
   }catch(e){ return null; }
 }
@@ -447,7 +460,8 @@ function openGate(portrait, buildText, phone, linkPromise){
    '<div id="gateCount" style="font-size:46px;font-weight:900;line-height:1">3</div>'+
    '<p id="gateStatus" style="color:var(--text2);font-size:13px;margin-top:6px">Calentando el enlace para la vista previa…</p>'+
    '<button id="gateBtn" class="btn btn-wa" disabled style="width:100%;margin-top:14px">'+icWa(18)+'Ir a WhatsApp y enviar</button>'+
-   '<p style="font-size:12px;color:var(--text2);margin-top:10px">Cuando se abra WhatsApp, espera a ver la fotito antes de darle Enviar.</p>'+
+   '<button id="gateSave" class="btn btn-outline" style="width:100%;margin-top:8px" onclick="saveStoreContact()">'+ic('user',16)+'Guardar número de la tienda (1 vez)</button>'+
+   '<p style="font-size:12px;color:var(--text2);margin-top:10px">Guarda el número 1 vez y luego comparte la tarjeta directo al chat.</p>'+
    '</div>');
   var count=3;
   var ci=setInterval(function(){
@@ -461,13 +475,13 @@ function openGate(portrait, buildText, phone, linkPromise){
   Promise.all([lp, minDelay]).then(function(resArr){
     var link=resArr[0];
     var st=document.getElementById('gateStatus');
-    if(st) st.textContent = link ? '✓ Tarjeta lista. Se abrirá WhatsApp directo.' : '✓ Listo (se adjuntará la tarjeta).';
+    if(st) st.textContent = '✓ Tarjeta lista. Elige WhatsApp para enviarla.';
     var b=document.getElementById('gateBtn');
     if(b){ b.disabled=false;
       b.onclick=function(){
         closeModal();
-        if(link){ openWaText(buildText(link), phone); }
-        else{ sendCardToWhatsApp(portrait, buildText(null), phone); }
+        if(DIRECT_MODE && link){ openWaText(buildText(link), phone); }
+        else{ sendCardToWhatsApp(portrait, buildText(link), phone); }
       };
     }
   });
@@ -518,7 +532,8 @@ function renderStoreHead(){
   '<div class="hero-actions">'+
    '<a class="wa-big" href="https://wa.me/'+storePhone()+'?text='+encodeURIComponent('Hola 👋 vengo del catálogo de '+DB.name)+'" target="_blank" rel="noopener noreferrer">'+icWa(22)+'WhatsApp</a>'+
    (DB.settings.insta?'<a class="sq-social" href="https://instagram.com/'+esc(String(DB.settings.insta).replace('@',''))+'" target="_blank" rel="noopener noreferrer">'+ic('ig',24)+'</a>':'')+
-   '<button class="sq-social" onclick="shareStore()">'+ic('share',22)+'</button></div>'+
+   '<button class="sq-social" onclick="shareStore()">'+ic('share',22)+'</button>'+
+   '<button class="sq-social" onclick="saveStoreContact()" title="Guardar número de la tienda">'+ic('user',22)+'</button></div>'+
   '<div class="features">'+
    '<div class="feature">'+ic('truck',22)+'Envíos nacionales</div>'+
    '<div class="feature">'+ic('bank',22)+'Transf. bancario</div>'+
@@ -668,7 +683,7 @@ function renderConfirm(o){var pm=payLabel(o.payment_method),msg=waOrderMessage(o
   '<h1 style="font-size:38px;font-weight:900;margin:12px 0 6px;letter-spacing:-.02em">#'+o.number+'</h1>'+
   '<p style="color:var(--text2);font-size:15px">Total '+fmt(o.total)+' · '+esc(pm.bank)+'</p>'+
   '<div style="margin:16px 0"><button class="btn btn-wa" style="width:100%" onclick="sendOrderWA(\''+o.id+'\')">'+icWa(18)+'Enviar pedido por WhatsApp</button></div>'+
-  '<p style="font-size:13px;color:var(--text2)">Verás la pantalla-semáforo: espera a que diga ✓ y luego pulsa el botón para ir a WhatsApp.</p></div>'+
+  '<p style="font-size:13px;color:var(--text2)">Verás la pantalla-semáforo: espera el ✓ y pulsa el botón para enviar la tarjeta con los productos.</p></div>'+
   (pm.type==='transfer'?'<div class="conf-card"><b style="font-size:17px;font-weight:700">Datos para tu transferencia</b><div style="margin-top:12px">'+
    banks.map(function(b){return '<div class="bankline"><b>'+esc(b.bank)+'</b> '+esc(b.acct)+' · '+esc(b.holder)+'<button onclick="copyText(\''+esc(b.bank+' '+b.acct+' '+b.holder)+'\')">COPIAR</button></div>';}).join('')+'</div>':'')+
   (o.proofImage?'<div class="conf-card"><b style="font-size:15px;font-weight:700">📎 Comprobante adjunto</b><div style="margin-top:8px"><img src="'+o.proofImage+'" style="width:72px;height:72px;object-fit:cover;border-radius:12px"></div></div>':'')+
