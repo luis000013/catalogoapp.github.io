@@ -1,4 +1,4 @@
-/* CatálogoYa v3.8 · app.js — COMPLETO (preview con producto real + sin botón guardar contacto) */
+/* CatálogoYa v3.9 · app.js — COMPLETO (sin semáforo + preview optimizado) */
 /* 1 ICONOS */
 var ICON={
  cart:'<circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/>',
@@ -180,10 +180,10 @@ function shareStore(){var u=storeUrl()+'?t='+DB.handle;
 function openWaText(text,phone){window.open('https://wa.me/'+(phone||storePhone())+'?text='+encodeURIComponent(text),'_blank');}
 function copyText(t){function fb(){var ta=document.createElement('textarea');ta.value=t;document.body.appendChild(ta);ta.select();try{document.execCommand('copy');}catch(e){}document.body.removeChild(ta);toast('Copiado ✔','good');}
  if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(t).then(function(){toast('Copiado ✔','good');},fb);}else fb();}
-/* v3.7+: WhatsApp directo; la vista previa del enlace muestra la tarjeta */
-async function sendCardToWhatsApp(imageData,text,phone){
+/* v3.9: sin semáforo — abre WhatsApp directo con el enlace (la vista previa hace el trabajo) */
+function sendCardToWhatsApp(text, phone){
  openWaText(text, phone);
- toast('Se abrió WhatsApp con el enlace: la vista previa muestra la tarjeta con los productos.','good');
+ toast('Se abrió WhatsApp con el enlace: la vista previa muestra la tarjeta.','good');
 }
 function svgIconImg(name,color,px){
  return new Promise(function(res){
@@ -272,7 +272,7 @@ function setQty(i,q){if(q<=0){removeLine(i);return;}var p=findP(cart[i].pid);car
 var lastRemoved=null;
 function removeLine(i){lastRemoved={line:cart[i],i:i};cart.splice(i,1);persistCart();renderCartBadge();renderCart();
  toast('Artículo removido','warn','DESHACER',function(){cart.splice(lastRemoved.i,0,lastRemoved.line);persistCart();renderCartBadge();renderCart();});}
-/* 7 TARJETAS CANVAS + RICH PREVIEW + SEMÁFORO */
+/* 7 TARJETAS CANVAS + RICH PREVIEW (sin semáforo) */
 function wrapText(ctx,text,maxW){var words=text.split(' '),lines=[],cur='';
  for(var i=0;i<words.length;i++){var t=cur?cur+' '+words[i]:words[i];
   if(ctx.measureText(t).width>maxW&&cur){lines.push(cur);cur=words[i];}else cur=t;}
@@ -281,7 +281,6 @@ function roundRectPath(ctx,x,y,w,h,r){ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcT
 function drawContain(ctx,im,x,y,w,h){var ir=im.width/im.height,r=w/h,dw,dh;
  if(ir>r){dw=w;dh=w/ir;}else{dh=h;dw=h*ir;}
  ctx.drawImage(im,x+(w-dw)/2,y+(h-dh)/2,dw,dh);}
-/* v3.7: foto si hay; si no, ícono de categoría (nunca cuadro vacío) */
 function cardVisual(line){
   return new Promise(function(res){
     var out={img:null,icon:null,bg:'hsl('+line.p.hue+',55%,66%)',fg:'hsl('+line.p.hue+',45%,30%)'};
@@ -402,7 +401,7 @@ function waOrderMessage(o){
  L.push(EMO.hour+' Estado: Pendiente');
  return L.join('\n');
 }
-/* v3.8: usa el producto REAL (it.p del carrito O findP por pid) — adiós cuadros genéricos */
+/* v3.9: OG 1200x630 con JPEG q0.72 (más ligero = preview más rápida) */
 function drawOGCard(items, heading, totalText){
   return new Promise(function(resolve){
     Promise.all(items.map(function(it){
@@ -420,7 +419,7 @@ function drawOGCard(items, heading, totalText){
       for(var i=0;i<n;i++){var col=i%2,row=Math.floor(i/2);var x=x0+col*(size+gap),y=y0+row*(size+gap);var v=visArr[i];
         drawTile(ctx,v,x,y,size,size);}
       ctx.fillStyle='#aec0b6';ctx.font='400 26px '+F;ctx.fillText('CatálogoYa · vista del pedido',60,560);
-      resolve(c.toDataURL('image/jpeg',0.9));
+      resolve(c.toDataURL('image/jpeg',0.72));
     });
   });
 }
@@ -436,66 +435,32 @@ async function prepareCardLink(items, heading, totalText, redirect){
     return link;
   }catch(e){ return null; }
 }
-/* v3.8: SIN botón de guardar contacto */
-function openGate(portrait, buildText, phone, linkPromise){
-  openModal(
-   '<div style="text-align:center">'+
-   '<h3 style="font-size:18px;font-weight:800">Preparando tu tarjeta…</h3>'+
-   '<img src="'+portrait+'" style="width:100%;border-radius:16px;margin:12px 0">'+
-   '<div id="gateCount" style="font-size:46px;font-weight:900;line-height:1">3</div>'+
-   '<p id="gateStatus" style="color:var(--text2);font-size:13px;margin-top:6px">Calentando el enlace para la vista previa…</p>'+
-   '<button id="gateBtn" class="btn btn-wa" disabled style="width:100%;margin-top:14px">'+icWa(18)+'Ir a WhatsApp y enviar</button>'+
-   '<p style="font-size:12px;color:var(--text2);margin-top:10px">Se abrirá WhatsApp directo; la vista previa muestra la tarjeta.</p>'+
-   '</div>');
-  var count=3;
-  var ci=setInterval(function(){
-    count--;
-    var el=document.getElementById('gateCount');
-    if(el) el.textContent = count>0 ? String(count) : '✓';
-    if(count<=0) clearInterval(ci);
-  },1000);
-  var minDelay=new Promise(function(res){setTimeout(res,3000);});
-  var lp = linkPromise || Promise.resolve(null);
-  Promise.all([lp, minDelay]).then(function(resArr){
-    var link=resArr[0];
-    var st=document.getElementById('gateStatus');
-    if(st) st.textContent = '✓ Listo. Al pulsar, WhatsApp muestra la tarjeta en la vista previa.';
-    var b=document.getElementById('gateBtn');
-    if(b){ b.disabled=false;
-      b.onclick=function(){
-        closeModal();
-        sendCardToWhatsApp(portrait, buildText(link), phone);
-      };
-    }
-  });
-}
+/* v3.9: consulta → genera tarjeta y abre WhatsApp DIRECTO (sin semáforo) */
 async function confirmAvailability(){
   if(!cart.length)return toast('Tu carrito está vacío','warn');
   var c=cartCalc();
   toast('Generando tarjeta…','good');
   if(document.fonts&&document.fonts.ready){try{await document.fonts.ready;}catch(e){}}
-  var portrait=await drawAvailabilityCard(c.lines);
-  var linkPromise=(SB_ON && typeof prepareCardLink==='function')
-     ? prepareCardLink(c.lines, 'Consulta de disponibilidad — '+DB.name, c.lines.length+' artículos · Total estimado '+fmt(c.net), storeUrl()+'?t='+DB.handle+'&completar=1')
-     : null;
-  var buildText=function(link){ return availabilityCaption(c, link); };
-  openGate(portrait, buildText, storePhone(), linkPromise);
+  var link=null;
+  if(SB_ON && typeof prepareCardLink==='function'){
+    link = await prepareCardLink(c.lines, 'Consulta de disponibilidad — '+DB.name, c.lines.length+' artículos · Total estimado '+fmt(c.net), storeUrl()+'?t='+DB.handle+'&completar=1');
+  }
+  sendCardToWhatsApp(availabilityCaption(c, link), storePhone());
 }
+/* v3.9: pedido → genera tarjeta y abre WhatsApp DIRECTO (sin semáforo) */
 async function sendOrderWA(id){
   var o=findO(id);if(!o)return;
-  if(document.fonts&&document.fonts.ready){try{await document.fonts.ready;}catch(e){}}
-  var portrait=await drawOrderCard(o);
-  var linkPromise=(SB_ON && typeof prepareCardLink==='function')
-     ? prepareCardLink(o.items, 'Pedido #'+o.number+' — '+DB.name, o.items.length+' artículos · Total '+fmt(o.total), storeUrl()+'?t='+DB.handle)
-     : null;
-  var buildText=function(link){ if(link){o.card_url=link; persist();} return waOrderMessage(o)+(link?('\n\n'+EMO.mag+' Ver los productos: '+link):''); };
-  openGate(portrait, buildText, storePhone(), linkPromise);
+  var link=null;
+  if(SB_ON && typeof prepareCardLink==='function'){
+    link = await prepareCardLink(o.items, 'Pedido #'+o.number+' — '+DB.name, o.items.length+' artículos · Total '+fmt(o.total), storeUrl()+'?t='+DB.handle);
+    if(link){o.card_url=link;persist();}
+  }
+  sendCardToWhatsApp(waOrderMessage(o)+(link?('\n\n'+EMO.mag+' Ver los productos: '+link):''), storePhone());
   markWaSent(id);
 }
 function markWaSent(id){var o=findO(id);if(o&&!o.wa_sent_at){o.wa_sent_at=new Date().toISOString();persist();toast('Pedido transmitido al vendedor ✔','good');}}
 /* 8 CATALOGO */
 function cats(){var seen={},out=['Todo'];DB.products.forEach(function(p){if(!seen[p.cat]){seen[p.cat]=1;out.push(p.cat);}});return out;}
-/* v3.8: sin botón guardar contacto en el encabezado */
 function renderStoreHead(){
  var ini=DB.name.slice(0,2).toUpperCase();
  var logoHtml=DB.logo?'<img src="'+DB.logo+'" alt="">':esc(ini);
